@@ -12,6 +12,8 @@ export interface PlaybackApi {
   draft: Draft | null;
   loadVideo: (file: File) => void;
   togglePlayPause: () => void;
+  /** Seek to `startMs` and play, pausing automatically when `endMs` is reached. */
+  playRange: (startMs: number, endMs: number) => void;
   commitDraft: (text: string) => void;
   cancelDraft: () => void;
   /** Attach to the `<video>` element's onPlay. */
@@ -38,9 +40,15 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
   const [videoName, setVideoName] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [activeRange, setActiveRange] = useState<{
+    startMs: number;
+    endMs: number;
+  } | null>(null);
 
   const draftRef = useRef<Draft | null>(null);
   draftRef.current = draft;
+  // Set just before a range-triggered pause so that pause does not open a draft.
+  const suppressDraftRef = useRef(false);
   const addRef = useRef(add);
   addRef.current = add;
   const videoUrlRef = useRef<string | null>(null);
@@ -78,6 +86,14 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     setDraft(null);
   }, []);
 
+  const playRange = useCallback((startMs: number, endMs: number) => {
+    const video = videoRef.current;
+    if (!video || endMs <= startMs) return;
+    setActiveRange({ startMs, endMs });
+    video.currentTime = startMs / 1000;
+    void video.play();
+  }, []);
+
   const handleVideoPlay = useCallback(() => {
     setIsPlaying(true);
     setDraft(null);
@@ -87,11 +103,34 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     const video = videoRef.current;
     if (!video) return;
     setIsPlaying(false);
-    // Skip a draft on natural end, and never overwrite an open draft.
-    if (!video.ended && draftRef.current == null) {
+    // Any pause ends an active range.
+    setActiveRange(null);
+    const suppressDraft = suppressDraftRef.current;
+    suppressDraftRef.current = false;
+    // Skip a draft on natural end, after a range preview, and never overwrite
+    // an open draft.
+    if (!video.ended && !suppressDraft && draftRef.current == null) {
       setDraft({ startMs: Math.round(video.currentTime * 1000) });
     }
   }, []);
+
+  // Watch the active range while playing and pause exactly at its end.
+  useEffect(() => {
+    if (!isPlaying || !activeRange) return;
+    let frame = 0;
+    const tick = () => {
+      const video = videoRef.current;
+      if (video && video.currentTime * 1000 >= activeRange.endMs) {
+        suppressDraftRef.current = true;
+        setActiveRange(null);
+        video.pause();
+        return;
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [isPlaying, activeRange]);
 
   // Revoke the object URL when the component unmounts.
   useEffect(() => {
@@ -108,6 +147,7 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     draft,
     loadVideo,
     togglePlayPause,
+    playRange,
     commitDraft,
     cancelDraft,
     handleVideoPlay,
