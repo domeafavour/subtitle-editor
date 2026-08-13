@@ -4,6 +4,8 @@ import { SubtitleRow } from "./SubtitleRow";
 
 interface SubtitleListProps {
   lines: SubtitleWithEnd[];
+  videoLoaded: boolean;
+  onPlayRange: (startMs: number, endMs: number) => void;
   onUpdateText: (id: string, text: string) => void;
   onNudge: (id: string, deltaMs: number) => void;
   onDelete: (id: string) => void;
@@ -12,6 +14,8 @@ interface SubtitleListProps {
 /** Chronological subtitle list — the review/edit surface. */
 export function SubtitleList({
   lines,
+  videoLoaded,
+  onPlayRange,
   onUpdateText,
   onNudge,
   onDelete,
@@ -30,6 +34,8 @@ export function SubtitleList({
         <SubtitleRow
           key={line.id}
           line={line}
+          videoLoaded={videoLoaded}
+          onPlayRange={onPlayRange}
           onUpdateText={onUpdateText}
           onNudge={onNudge}
           onDelete={onDelete}

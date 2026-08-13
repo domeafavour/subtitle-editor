@@ -6,14 +6,23 @@ import type { SubtitleWithEnd } from "#/lib/types";
 
 interface SubtitleRowProps {
   line: SubtitleWithEnd;
+  /** False when no video is loaded — the play action is a no-op then. */
+  videoLoaded: boolean;
+  onPlayRange: (startMs: number, endMs: number) => void;
   onUpdateText: (id: string, text: string) => void;
   onNudge: (id: string, deltaMs: number) => void;
   onDelete: (id: string) => void;
 }
 
-/** One subtitle in the list: start · editable text · computed end, plus nudge/delete. */
+/**
+ * One subtitle in the list. The body (start · text · end) is a button that
+ * plays the line's range; editing moves to the pencil, nudge/delete stay as
+ * separate controls.
+ */
 export function SubtitleRow({
   line,
+  videoLoaded,
+  onPlayRange,
   onUpdateText,
   onNudge,
   onDelete,
@@ -42,10 +51,7 @@ export function SubtitleRow({
   };
 
   return (
-    <li className="flex items-start gap-3 rounded border border-neutral-800 bg-neutral-900 px-3 py-2">
-      <span className="w-16 shrink-0 pt-1.5 font-mono text-xs text-neutral-400">
-        {formatTimestamp(line.startMs)}
-      </span>
+    <li className="group flex items-start gap-3 rounded border border-neutral-800 bg-neutral-900 px-3 py-2">
       {editing ? (
         <textarea
           ref={textareaRef}
@@ -59,19 +65,40 @@ export function SubtitleRow({
       ) : (
         <button
           type="button"
-          onClick={() => {
-            setEditValue(line.text);
-            setEditing(true);
-          }}
-          className="min-w-0 flex-1 pt-1 text-left text-sm text-neutral-100 hover:underline"
+          disabled={!videoLoaded}
+          onClick={() => onPlayRange(line.startMs, line.endMs)}
+          title={
+            videoLoaded
+              ? `Play ${formatTimestamp(line.startMs)} → ${formatTimestamp(line.endMs)}`
+              : "Load a video to play this line"
+          }
+          className="flex min-w-0 flex-1 items-start gap-3 text-left transition-colors hover:bg-neutral-800/70 disabled:cursor-not-allowed"
         >
-          {line.text}
+          <span className="w-16 shrink-0 pt-1.5 font-mono text-xs text-neutral-400">
+            {formatTimestamp(line.startMs)}
+          </span>
+          <span className="min-w-0 flex-1 pt-1 text-sm text-neutral-100">
+            {line.text}
+          </span>
+          <span className="w-16 shrink-0 pt-1.5 font-mono text-xs text-neutral-400">
+            {formatTimestamp(line.endMs)}
+          </span>
         </button>
       )}
-      <span className="w-16 shrink-0 pt-1.5 font-mono text-xs text-neutral-400">
-        {formatTimestamp(line.endMs)}
-      </span>
       <div className="flex shrink-0 gap-1 pt-1">
+        {!editing && (
+          <button
+            type="button"
+            onClick={() => {
+              setEditValue(line.text);
+              setEditing(true);
+            }}
+            title="Edit text"
+            className="rounded px-1.5 py-0.5 text-xs text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+          >
+            ✎
+          </button>
+        )}
         <button
           type="button"
           onClick={() => onNudge(line.id, -100)}
