@@ -1,80 +1,110 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
-import { SettingsPanel } from "#/components/SettingsPanel";
-import { SubtitleInput } from "#/components/SubtitleInput";
-import { SubtitleList } from "#/components/SubtitleList";
-import { Toolbar } from "#/components/Toolbar";
-import { VideoStage } from "#/components/VideoStage";
-import { useGlobalShortcuts } from "#/hooks/useGlobalShortcuts";
-import { usePlayback } from "#/hooks/usePlayback";
-import { useSettings } from "#/hooks/useSettings";
-import { useSubtitles } from "#/hooks/useSubtitles";
-import { sortedWithEnds } from "#/lib/timing";
+import { DropZone } from "#/components/DropZone";
+import { useProjects } from "#/hooks/useProjects";
+import type { Project } from "#/lib/types";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({ component: ProjectList });
 
-function Home() {
-  const { settings, update } = useSettings();
-  const { subtitles, add, updateText, setManualEnd, nudgeStart, remove } =
-    useSubtitles();
-  const playback = usePlayback({ add });
-  useGlobalShortcuts(playback);
+function ProjectList() {
+  const { projects, createProject, deleteProject, isMigrating } = useProjects();
+  const navigate = useNavigate();
 
-  const lines = useMemo(
-    () => sortedWithEnds(subtitles, settings),
-    [subtitles, settings],
-  );
+  const openProject = (project: Project) => {
+    navigate({ to: "/project/$projectId", params: { projectId: project.id } });
+  };
+
+  const handleFile = (file: File) => {
+    void createProject({ videoName: file.name }).then(openProject);
+  };
+
+  const handleFileHandle = (handle: FileSystemFileHandle) => {
+    void handle
+      .getFile()
+      .then((file) => createProject({ videoName: file.name, handle }))
+      .then(openProject)
+      .catch(() => {});
+  };
+
+  const handleDelete = (project: Project) => {
+    if (
+      !window.confirm(
+        `Delete project “${project.name}”? Its subtitles and stored video reference will be removed.`,
+      )
+    ) {
+      return;
+    }
+    deleteProject(project.id);
+  };
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-4 p-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6">
       <header>
         <h1 className="text-2xl font-bold text-neutral-100">Subtitle Editor</h1>
         <p className="text-sm text-neutral-400">
-          Space to play/pause · Enter commits a line
+          Projects group a video with its subtitles.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-        <div className="flex flex-col gap-3">
-          <VideoStage
-            videoUrl={playback.videoUrl}
-            videoRef={playback.videoRef}
-            onFile={playback.loadVideo}
-            onFileHandle={playback.loadVideoHandle}
-            restoringVideo={playback.restoringVideo}
-            videoReconnect={playback.videoReconnect}
-            onReconnectVideo={playback.reconnectVideo}
-            onCancelReconnect={playback.cancelReconnect}
-            hasRestoredSubtitles={subtitles.length > 0}
-            lines={lines}
-            isPlaying={playback.isPlaying}
-            onVideoPlay={playback.handleVideoPlay}
-            onVideoPause={playback.handleVideoPause}
-          />
-          {playback.draft && (
-            <SubtitleInput
-              draftStartMs={playback.draft.startMs}
-              onCommit={playback.commitDraft}
-              onCancel={playback.cancelDraft}
-            />
-          )}
-          <Toolbar lines={lines} baseName={playback.videoName ?? "subtitles"} />
-        </div>
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-neutral-300">
+          New project
+        </h2>
+        <DropZone
+          onFile={handleFile}
+          onFileHandle={handleFileHandle}
+          title="Create a project from a video"
+          subtitle="Drop a video file here, or click to browse"
+        />
+      </section>
 
-        <div className="flex flex-col gap-3">
-          <SettingsPanel settings={settings} onChange={update} />
-          <SubtitleList
-            lines={lines}
-            videoLoaded={playback.videoUrl != null}
-            onPlayRange={playback.playRange}
-            onUpdateText={updateText}
-            onSetManualEnd={setManualEnd}
-            onNudge={nudgeStart}
-            onDelete={remove}
-          />
-        </div>
-      </div>
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-neutral-300">
+          Projects
+        </h2>
+        {isMigrating ? (
+          <p className="text-sm text-neutral-500">
+            Checking for existing data…
+          </p>
+        ) : projects.length === 0 ? (
+          <p className="text-sm text-neutral-500">
+            No projects yet — pick a video above to create one.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {projects.map((project) => (
+              <li
+                key={project.id}
+                className="flex items-center gap-3 rounded border border-neutral-800 bg-neutral-900 px-3 py-2"
+              >
+                <Link
+                  to="/project/$projectId"
+                  params={{ projectId: project.id }}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <span className="block font-medium text-neutral-100">
+                    {project.name}
+                  </span>
+                  <span className="block text-xs text-neutral-500">
+                    {project.videoName}
+                    {project.subtitles.length > 0 &&
+                      ` · ${project.subtitles.length} line${
+                        project.subtitles.length === 1 ? "" : "s"
+                      }`}
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(project)}
+                  className="shrink-0 rounded px-2 py-1 text-sm text-neutral-500 hover:bg-red-950 hover:text-red-300"
+                >
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
