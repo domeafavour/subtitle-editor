@@ -4,8 +4,10 @@
  * Times are milliseconds as integers (never floats) so SRT/VTT export is exact
  * and there is no float-drift when comparing against `video.currentTime`.
  *
- * `endMs` is never stored — it is derived at render time from the line's start,
- * text, the reading-speed settings, and the next line's start. See timing.ts.
+ * A subtitle's effective end time (`SubtitleWithEnd.endMs`) is never stored —
+ * it is derived at render time from the line's start, text, the reading-speed
+ * settings, and the next line's start, unless the line carries a `manualEndMs`
+ * override. See timing.ts.
  */
 export interface Subtitle {
   /** Stable identity, generated with `crypto.randomUUID()`. */
@@ -14,10 +16,22 @@ export interface Subtitle {
   startMs: number;
   /** Trimmed, no `-->`. May contain `\n` for multi-line blocks. */
   text: string;
+  /**
+   * Optional user override for the end time, absolute video time in integer
+   * milliseconds. Absent → the end is derived from reading speed. When present
+   * it replaces the reading estimate but is still clamped to the next line's
+   * start and floored to `startMs + 1` at render time (see timing.ts).
+   * Persisted in the same localStorage key.
+   */
+  manualEndMs?: number;
 }
 
 export interface SubtitleWithEnd extends Subtitle {
-  /** Derived end time (inclusive start, exclusive end). Never persisted. */
+  /**
+   * Effective end (inclusive start, exclusive end). Equals `manualEndMs` when
+   * set, otherwise the reading-speed estimate; always clamped to the next
+   * line's start and floored to `startMs + 1`. Never persisted.
+   */
   endMs: number;
 }
 

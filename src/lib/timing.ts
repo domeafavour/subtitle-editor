@@ -1,13 +1,15 @@
 import type { Settings, Subtitle, SubtitleWithEnd } from "./types";
 
 /**
- * Derived-timing core. All end times are computed, never stored, so clamping
- * and overlap prevention reflow live whenever lines are added, edited, deleted,
- * nudged, or the reading-speed settings change.
+ * Derived-timing core. End times are computed, never stored — derived from the
+ * reading-speed estimate by default, overridable per line via `manualEndMs`.
+ * Clamping and overlap prevention reflow live whenever lines are added,
+ * edited, deleted, nudged, overridden, or the reading-speed settings change.
  *
- * The algorithm (ADR 0001):
+ * The algorithm (ADR 0001 + ADR 0002):
  *   baseDuration = clamp(chars / charsPerSec, min, max)
- *   end = min(start + baseDuration, nextLine.start)   // never overlaps
+ *   preferred    = manualEndMs ?? (start + baseDuration)
+ *   end          = min(preferred, nextLine.start)     // never overlaps
  */
 
 /** Reading-time estimate for `text` in milliseconds. */
@@ -21,20 +23,20 @@ export function baseDurationMs(text: string, settings: Settings): number {
 }
 
 /**
- * Final end time for a subtitle, clamped to `nextStartMs` when that is earlier
- * than the reading estimate. Always positive duration (>= start + 1ms) so SRT
- * stays valid even when two lines share the same start time.
+ * Effective end time for a subtitle: the `manualEndMs` override when set,
+ * otherwise the reading-speed estimate. Always clamped to `nextStartMs` when
+ * that is earlier (no overlaps), and floored to `start + 1` so SRT stays valid
+ * even when two lines share the same start time.
  */
 export function effectiveEndMs(
   sub: Subtitle,
   nextStartMs: number | null,
   settings: Settings,
 ): number {
-  const base = baseDurationMs(sub.text, settings);
+  const estimate = sub.startMs + baseDurationMs(sub.text, settings);
+  const preferred = sub.manualEndMs != null ? sub.manualEndMs : estimate;
   const byNext =
-    nextStartMs == null
-      ? sub.startMs + base
-      : Math.min(sub.startMs + base, nextStartMs);
+    nextStartMs == null ? preferred : Math.min(preferred, nextStartMs);
   return Math.max(byNext, sub.startMs + 1);
 }
 

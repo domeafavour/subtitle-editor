@@ -25,7 +25,7 @@ export function parseSubtitles(raw: unknown): Subtitle[] {
   const result: Subtitle[] = [];
   for (const item of raw) {
     if (typeof item !== "object" || item === null) continue;
-    const { id, startMs, text } = item as Record<string, unknown>;
+    const { id, startMs, text, manualEndMs } = item as Record<string, unknown>;
     if (typeof id !== "string" || id.length === 0) continue;
     if (
       typeof startMs !== "number" ||
@@ -35,7 +35,14 @@ export function parseSubtitles(raw: unknown): Subtitle[] {
       continue;
     }
     if (typeof text !== "string" || text.trim().length === 0) continue;
-    result.push({ id, startMs: Math.round(startMs), text });
+    const clean: Subtitle = { id, startMs: Math.round(startMs), text };
+    // Keep the override only when it is a finite number later than the start;
+    // otherwise drop it → the end falls back to the reading-speed derivation.
+    if (typeof manualEndMs === "number" && Number.isFinite(manualEndMs)) {
+      const rounded = Math.round(manualEndMs);
+      if (rounded > clean.startMs) clean.manualEndMs = rounded;
+    }
+    result.push(clean);
   }
   return result;
 }
