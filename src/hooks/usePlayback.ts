@@ -9,6 +9,8 @@ export interface PlaybackApi {
   videoRef: RefObject<HTMLVideoElement | null>;
   videoUrl: string | null;
   videoName: string | null;
+  /** Real video length in integer ms once metadata has loaded; null until then. */
+  videoDuration: number | null;
   isPlaying: boolean;
   draft: Draft | null;
   loadVideo: (file: File) => void;
@@ -30,6 +32,8 @@ export interface PlaybackApi {
   playRange: (startMs: number, endMs: number) => void;
   commitDraft: (text: string) => void;
   cancelDraft: () => void;
+  /** Attach to the `<video>` element's onLoadedMetadata. */
+  handleVideoMetadata: () => void;
   /** Attach to the `<video>` element's onPlay. */
   handleVideoPlay: () => void;
   /** Attach to the `<video>` element's onPause. */
@@ -58,6 +62,7 @@ export function usePlayback({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoName, setVideoName] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [activeRange, setActiveRange] = useState<{
@@ -87,6 +92,7 @@ export function usePlayback({
       return URL.createObjectURL(file);
     });
     setVideoName(file.name);
+    setVideoDuration(null);
     setDraft(null);
   }, []);
 
@@ -100,6 +106,7 @@ export function usePlayback({
             return URL.createObjectURL(file);
           });
           setVideoName(file.name);
+          setVideoDuration(null);
           setDraft(null);
           void storeHandle(projectId, handle);
         } catch {
@@ -139,6 +146,15 @@ export function usePlayback({
     setActiveRange({ startMs, endMs });
     video.currentTime = startMs / 1000;
     void video.play();
+  }, []);
+
+  const handleVideoMetadata = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    // `duration` is NaN before metadata and Infinity for some streams.
+    if (Number.isFinite(video.duration) && video.duration > 0) {
+      setVideoDuration(Math.round(video.duration * 1000));
+    }
   }, []);
 
   const handleVideoPlay = useCallback(() => {
@@ -204,6 +220,7 @@ export function usePlayback({
           const file = await handle.getFile();
           if (!cancelled) {
             setVideoName(file.name);
+            setVideoDuration(null);
             setVideoUrl(URL.createObjectURL(file));
             loaded = true;
           }
@@ -242,6 +259,7 @@ export function usePlayback({
           return URL.createObjectURL(file);
         });
         setVideoName(file.name);
+        setVideoDuration(null);
         setDraft(null);
       } catch {
         // Permission declined or the file is gone.
@@ -259,6 +277,7 @@ export function usePlayback({
     videoRef,
     videoUrl,
     videoName,
+    videoDuration,
     isPlaying,
     draft,
     loadVideo,
@@ -271,6 +290,7 @@ export function usePlayback({
     playRange,
     commitDraft,
     cancelDraft,
+    handleVideoMetadata,
     handleVideoPlay,
     handleVideoPause,
   };
