@@ -1,9 +1,11 @@
-import type { Settings, Subtitle } from "./types";
+import type { Project, Settings, Subtitle } from "./types";
 
 /** Versioned localStorage keys — bump the version to migrate a schema. */
 export const STORAGE_KEYS = {
-  subtitles: "subtitle-editor.subtitles.v1",
+  projects: "subtitle-editor.projects.v1",
   settings: "subtitle-editor.settings.v1",
+  /** Retired live key; read + cleared only by the one-time legacy migration. */
+  legacySubtitles: "subtitle-editor.subtitles.v1",
 } as const;
 
 /** English-reading default. The user can adjust all three values. */
@@ -43,6 +45,39 @@ export function parseSubtitles(raw: unknown): Subtitle[] {
       if (rounded > clean.startMs) clean.manualEndMs = rounded;
     }
     result.push(clean);
+  }
+  return result;
+}
+
+/**
+ * Validate and repair persisted project data. Entries with missing/blank
+ * ids or names are dropped, duplicates are skipped, and field types are
+ * repaired (videoName → "", createdAt → 0, subtitles → parseSubtitles).
+ */
+export function parseProjects(raw: unknown): Project[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const result: Project[] = [];
+  for (const item of raw) {
+    if (typeof item !== "object" || item === null) continue;
+    const { id, name, videoName, createdAt, subtitles } = item as Record<
+      string,
+      unknown
+    >;
+    if (typeof id !== "string" || id.length === 0) continue;
+    if (typeof name !== "string" || name.trim().length === 0) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    result.push({
+      id,
+      name,
+      videoName: typeof videoName === "string" ? videoName : "",
+      createdAt:
+        typeof createdAt === "number" && Number.isFinite(createdAt)
+          ? createdAt
+          : 0,
+      subtitles: parseSubtitles(subtitles),
+    });
   }
   return result;
 }

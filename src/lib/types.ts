@@ -48,3 +48,20 @@ export interface Settings {
 export interface Draft {
   startMs: number;
 }
+
+/**
+ * A named bundle of one video's subtitles. Projects let the user manage
+ * several videos, each with its own subtitle list.
+ */
+export interface Project {
+  /** Stable identity, generated with `crypto.randomUUID()`. */
+  id: string;
+  /** Display name. Defaults to the video's base name; user-renamable. */
+  name: string;
+  /** Original video file name with extension, e.g. `"clip.mp4"`. Empty when unknown. */
+  videoName: string;
+  /** Creation epoch ms — drives list ordering (newest first). */
+  createdAt: number;
+  /** The project's subtitles, in insertion order (display order derived). */
+  subtitles: Subtitle[];
+}
