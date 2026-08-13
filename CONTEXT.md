@@ -63,6 +63,13 @@ line's start (like vim `b`); `]` seeks to the current line's end (like vim `e`).
 The per-row `⟪` / `⟫` buttons jump to that line's own start / end.
 _Avoid_: seek, scrub-to-line
 
+**Active line**:
+The subtitle line whose time range contains the video's current time —
+`startMs <= currentTime < endMs`. When the playhead sits in a gap between lines,
+no line is active. The active line is highlighted in the list at all times and
+shown over the video by the playback overlay while it plays.
+_Avoid_: current line, selected line, highlighted line
+
 **Line order**:
 The chronological ordering of subtitles. Always derived from start times;
 never stored.
