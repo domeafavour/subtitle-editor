@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import { ProjectHeader } from "#/components/ProjectHeader";
 import { SettingsPanel } from "#/components/SettingsPanel";
@@ -13,7 +13,11 @@ import { usePlayback } from "#/hooks/usePlayback";
 import { useProjectSubtitles } from "#/hooks/useProjectSubtitles";
 import { useProjects } from "#/hooks/useProjects";
 import { useSettings } from "#/hooks/useSettings";
-import { sortedWithEnds } from "#/lib/timing";
+import {
+  lineAtPosition,
+  previousLineStartMs,
+  sortedWithEnds,
+} from "#/lib/timing";
 
 export const Route = createFileRoute("/project/$projectId")({
   component: ProjectRoute,
@@ -40,7 +44,6 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
   } = useProjects();
   const subs = useProjectSubtitles({ projects, updateSubtitles, projectId });
   const playback = usePlayback({ add: subs.add, projectId });
-  useGlobalShortcuts(playback);
   const navigate = useNavigate();
 
   const project = projects.find((item) => item.id === projectId);
@@ -56,6 +59,31 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
         : (lines[lines.length - 1]?.endMs ?? 0),
     [playback.videoDuration, lines],
   );
+
+  // `[` seeks to the previous line's start (vim `b`), `]` to the current
+  // line's end (vim `e`). Both end paused (no auto-play).
+  const jumpToStart = useCallback(() => {
+    const video = playback.videoRef.current;
+    if (!video) return;
+    const target = previousLineStartMs(
+      lines,
+      Math.round(video.currentTime * 1000),
+    );
+    if (target != null) playback.seekTo(target);
+  }, [lines, playback.seekTo, playback.videoRef]);
+
+  const jumpToEnd = useCallback(() => {
+    const video = playback.videoRef.current;
+    if (!video) return;
+    const line = lineAtPosition(lines, Math.round(video.currentTime * 1000));
+    if (line) playback.seekTo(line.endMs);
+  }, [lines, playback.seekTo, playback.videoRef]);
+
+  useGlobalShortcuts({
+    togglePlayPause: playback.togglePlayPause,
+    jumpToStart,
+    jumpToEnd,
+  });
 
   const handleDelete = () => {
     if (!project) return;
@@ -136,6 +164,7 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
             lines={lines}
             videoLoaded={playback.videoUrl != null}
             onPlayRange={playback.playRange}
+            onJumpTo={playback.seekTo}
             onUpdateText={subs.updateText}
             onSetManualEnd={subs.setManualEnd}
             onNudge={subs.nudgeStart}
