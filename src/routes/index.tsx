@@ -40,6 +40,11 @@ function Home() {
             videoUrl={playback.videoUrl}
             videoRef={playback.videoRef}
             onFile={playback.loadVideo}
+            onFileHandle={playback.loadVideoHandle}
+            restoringVideo={playback.restoringVideo}
+            videoReconnect={playback.videoReconnect}
+            onReconnectVideo={playback.reconnectVideo}
+            onCancelReconnect={playback.cancelReconnect}
             hasRestoredSubtitles={subtitles.length > 0}
             lines={lines}
             isPlaying={playback.isPlaying}
