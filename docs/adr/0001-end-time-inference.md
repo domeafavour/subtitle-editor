@@ -1,6 +1,6 @@
 # ADR 0001: End times are derived from reading speed, never stored
 
-**Status:** accepted
+**Status:** superseded by ADR 0002
 
 A manual subtitle editor captures each line's start time at the moment the
 video is paused, but the end time is never set by hand: it is inferred from how

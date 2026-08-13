@@ -1,14 +1,15 @@
 # Subtitle Editor
 
 A browser app for writing subtitles by hand: a local video plays, and each
-subtitle is typed at the moment the video is paused. The end time is never set
-by hand — it is inferred from how long the line is.
+subtitle is typed at the moment the video is paused. The end time is inferred
+from how long the line is by default, and can be overridden per line.
 
 ## Language
 
 **Subtitle**:
-A line of text with a start time and a derived end time. Text is trimmed and
-`-->`-free, and may contain internal newlines for multi-line blocks.
+A line of text with a start time, a derived end time, and an optional end
+override. Text is trimmed and `-->`-free, and may contain internal newlines for
+multi-line blocks.
 _Avoid_: caption, cue
 
 **Start time**:
@@ -17,14 +18,24 @@ captured. A non-negative integer. Captured, never inferred.
 _Avoid_: timestamp, timecode
 
 **End time**:
-The moment a subtitle stops being displayed. Always derived — clamped to the
-next subtitle's start when the reading estimate would overlap it. Never entered
-by the user and never stored.
+The moment a subtitle stops being displayed. Derived from the reading estimate
+by default and clamped to the next subtitle's start; per-line overridable (see
+end override). Always floored to `start + 1` ms so SRT/VTT stay valid. Never
+stored — recomputed at render time.
 _Avoid_: duration
+
+**End override**:
+An optional user-entered end time stored on a line, in absolute video
+milliseconds. When present it replaces the reading estimate for that line's
+effective end; the effective end is still clamped to the next subtitle's start
+and floored to `start + 1` ms. Absent means the end is derived from reading
+speed.
+_Avoid_: manual end, hard end, custom end
 
 **Reading estimate**:
 How long a line stays on screen so a viewer can read it: characters divided by
-the reading speed, clamped between minimum and maximum seconds.
+the reading speed, clamped between minimum and maximum seconds. The default end
+when no end override is set.
 _Avoid_: duration, hold time
 
 **Reading speed settings**:
@@ -59,5 +70,6 @@ re-picking.
 _Avoid_: upload, asset
 
 **Export**:
-Producing SRT or VTT files with the derived end times baked in.
+Producing SRT or VTT files with the effective end times (derived or overridden)
+baked in.
 _Avoid_: download, render
