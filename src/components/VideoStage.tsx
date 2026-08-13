@@ -22,6 +22,7 @@ interface VideoStageProps {
   dropZoneSubtitle?: string;
   lines: SubtitleWithEnd[];
   isPlaying: boolean;
+  onLoadedMetadata: () => void;
   onVideoPlay: () => void;
   onVideoPause: () => void;
 }
@@ -40,6 +41,7 @@ export function VideoStage({
   dropZoneSubtitle,
   lines,
   isPlaying,
+  onLoadedMetadata,
   onVideoPlay,
   onVideoPause,
 }: VideoStageProps) {
@@ -63,6 +65,7 @@ export function VideoStage({
             src={videoUrl}
             controls
             playsInline
+            onLoadedMetadata={onLoadedMetadata}
             onPlay={onVideoPlay}
             onPause={onVideoPause}
             className="h-full w-full object-contain"
