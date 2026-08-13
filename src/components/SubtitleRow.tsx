@@ -13,6 +13,8 @@ interface SubtitleRowProps {
   /** False when no video is loaded — the play action is a no-op then. */
   videoLoaded: boolean;
   onPlayRange: (startMs: number, endMs: number) => void;
+  /** Seek to an absolute time (line start/end) without playing. */
+  onJumpTo: (ms: number) => void;
   onUpdateText: (id: string, text: string) => void;
   /** Set a manual end override (ms) or clear it (null → automatic). */
   onSetManualEnd: (id: string, endMs: number | null) => void;
@@ -29,6 +31,7 @@ export function SubtitleRow({
   line,
   videoLoaded,
   onPlayRange,
+  onJumpTo,
   onUpdateText,
   onSetManualEnd,
   onNudge,
@@ -91,6 +94,18 @@ export function SubtitleRow({
 
   return (
     <li className="group flex items-start gap-3 rounded border border-neutral-800 bg-neutral-900 px-3 py-2">
+      {!editingText && (
+        <button
+          type="button"
+          disabled={!videoLoaded}
+          onClick={() => onJumpTo(line.startMs)}
+          title={videoLoaded ? "Jump to start" : "Load a video to jump"}
+          aria-label="Jump to line start"
+          className="shrink-0 self-start pt-1.5 text-xs text-neutral-400 hover:text-neutral-100 disabled:cursor-not-allowed"
+        >
+          ⟪
+        </button>
+      )}
       {editingText ? (
         <textarea
           ref={textareaRef}
@@ -174,6 +189,16 @@ export function SubtitleRow({
             ✎
           </button>
         )}
+        <button
+          type="button"
+          disabled={!videoLoaded}
+          onClick={() => onJumpTo(line.endMs)}
+          title={videoLoaded ? "Jump to end" : "Load a video to jump"}
+          aria-label="Jump to line end"
+          className="rounded px-1.5 py-0.5 text-xs text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 disabled:cursor-not-allowed"
+        >
+          ⟫
+        </button>
         <button
           type="button"
           onClick={() => onNudge(line.id, -100)}

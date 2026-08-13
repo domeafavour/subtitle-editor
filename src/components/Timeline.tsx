@@ -54,6 +54,18 @@ export function Timeline({
     return () => cancelAnimationFrame(frame);
   }, [isPlaying, videoRef]);
 
+  // Reflect paused seeks (e.g. the `[`/`]` jumps or dragging the native
+  // progress bar) on the playhead — `timeupdate` fires on seek while paused.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || durationMs <= 0) return;
+    const onTimeUpdate = () => {
+      if (!isPlaying) setPlayheadMs(Math.round(video.currentTime * 1000));
+    };
+    video.addEventListener("timeupdate", onTimeUpdate);
+    return () => video.removeEventListener("timeupdate", onTimeUpdate);
+  }, [isPlaying, durationMs, videoRef]);
+
   return (
     <div className="relative h-10 w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
       {durationMs > 0 &&

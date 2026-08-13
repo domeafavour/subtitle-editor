@@ -6,6 +6,7 @@ interface SubtitleListProps {
   lines: SubtitleWithEnd[];
   videoLoaded: boolean;
   onPlayRange: (startMs: number, endMs: number) => void;
+  onJumpTo: (ms: number) => void;
   onUpdateText: (id: string, text: string) => void;
   onSetManualEnd: (id: string, endMs: number | null) => void;
   onNudge: (id: string, deltaMs: number) => void;
@@ -17,6 +18,7 @@ export function SubtitleList({
   lines,
   videoLoaded,
   onPlayRange,
+  onJumpTo,
   onUpdateText,
   onSetManualEnd,
   onNudge,
@@ -38,6 +40,7 @@ export function SubtitleList({
           line={line}
           videoLoaded={videoLoaded}
           onPlayRange={onPlayRange}
+          onJumpTo={onJumpTo}
           onUpdateText={onUpdateText}
           onSetManualEnd={onSetManualEnd}
           onNudge={onNudge}
