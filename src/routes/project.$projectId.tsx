@@ -5,6 +5,7 @@ import { ProjectHeader } from "#/components/ProjectHeader";
 import { SettingsPanel } from "#/components/SettingsPanel";
 import { SubtitleInput } from "#/components/SubtitleInput";
 import { SubtitleList } from "#/components/SubtitleList";
+import { Timeline } from "#/components/Timeline";
 import { Toolbar } from "#/components/Toolbar";
 import { VideoStage } from "#/components/VideoStage";
 import { useGlobalShortcuts } from "#/hooks/useGlobalShortcuts";
@@ -46,6 +47,14 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
   const lines = useMemo(
     () => sortedWithEnds(subs.subtitles, settings),
     [subs.subtitles, settings],
+  );
+  // Timeline scale: the real video duration when loaded, else the last line's end.
+  const durationMs = useMemo(
+    () =>
+      playback.videoDuration != null
+        ? playback.videoDuration
+        : (lines[lines.length - 1]?.endMs ?? 0),
+    [playback.videoDuration, lines],
   );
 
   const handleDelete = () => {
@@ -100,8 +109,16 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
             onCancelReconnect={playback.cancelReconnect}
             lines={lines}
             isPlaying={playback.isPlaying}
+            onLoadedMetadata={playback.handleVideoMetadata}
             onVideoPlay={playback.handleVideoPlay}
             onVideoPause={playback.handleVideoPause}
+          />
+          <Timeline
+            lines={lines}
+            durationMs={durationMs}
+            isPlaying={playback.isPlaying}
+            videoRef={playback.videoRef}
+            onPlayRange={playback.playRange}
           />
           {playback.draft && (
             <SubtitleInput
