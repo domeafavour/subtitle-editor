@@ -37,8 +37,10 @@ export interface PlaybackApi {
 }
 
 interface UsePlaybackOptions {
-  /** From useSubtitles — used to persist a committed line. */
+  /** Persists a committed line into the project's subtitles. */
   add: (startMs: number, text: string) => void;
+  /** The project whose video handle this playback session belongs to. */
+  projectId: string;
 }
 
 /**
@@ -46,9 +48,13 @@ interface UsePlaybackOptions {
  *
  * A draft is created whenever the video is paused (start = pause timecode) and
  * discarded when it plays. The latest `draft`/`add` are mirrored into refs so
- * the handlers stay referentially stable and never read stale closures.
+ * the handlers stay referentially stable and never read stale closures. The
+ * video handle is stored/read keyed by `projectId`.
  */
-export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
+export function usePlayback({
+  add,
+  projectId,
+}: UsePlaybackOptions): PlaybackApi {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoName, setVideoName] = useState<string | null>(null);
@@ -84,22 +90,25 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     setDraft(null);
   }, []);
 
-  const loadVideoHandle = useCallback((handle: FileSystemFileHandle) => {
-    void (async () => {
-      try {
-        const file = await handle.getFile();
-        setVideoUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return URL.createObjectURL(file);
-        });
-        setVideoName(file.name);
-        setDraft(null);
-        void storeHandle(handle);
-      } catch {
-        // The file is no longer accessible — nothing to load.
-      }
-    })();
-  }, []);
+  const loadVideoHandle = useCallback(
+    (handle: FileSystemFileHandle) => {
+      void (async () => {
+        try {
+          const file = await handle.getFile();
+          setVideoUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(file);
+          });
+          setVideoName(file.name);
+          setDraft(null);
+          void storeHandle(projectId, handle);
+        } catch {
+          // The file is no longer accessible — nothing to load.
+        }
+      })();
+    },
+    [projectId],
+  );
 
   const togglePlayPause = useCallback(() => {
     const video = videoRef.current;
@@ -185,7 +194,7 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     setRestoringVideo(true);
     void (async () => {
       try {
-        const handle = await readStoredHandle();
+        const handle = await readStoredHandle(projectId);
         if (cancelled || !handle) return;
         // Try to reopen directly first — Chrome may still hold the grant for a
         // same-session reload. If that throws, the permission was reset, and we
@@ -218,7 +227,7 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [projectId]);
 
   const reconnectVideo = useCallback(() => {
     void (async () => {
