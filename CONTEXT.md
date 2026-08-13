@@ -77,6 +77,13 @@ _Avoid_: dashboard, home
 The per-project route; the editor, scoped to one project's video and subtitles.
 _Avoid_: workspace, session
 
+**Timeline**:
+The horizontal track in the project editor showing each line's time range as a
+block, scaled against the video's duration (or the last line's end when no video
+is loaded). Clicking a block plays that line's range; a vertical playhead tracks
+the current video time.
+_Avoid_: scrubber, waveform, track
+
 **Migration**:
 The one-time move of pre-project data (the retired `subtitle-editor.subtitles.v1`
 list and the legacy IndexedDB `video` handle) into a project on first load.
