@@ -6,8 +6,10 @@ interface DropZoneProps {
   onFile: (file: File) => void;
   /** File System Access API path — also persists the file handle for reloads. */
   onFileHandle: (handle: FileSystemFileHandle) => void;
-  /** True when subtitles were restored from localStorage — pick the video. */
-  hasRestoredSubtitles: boolean;
+  /** Main call-to-action, e.g. "Create a project from a video". */
+  title: string;
+  /** Secondary hint, e.g. "Drop a video file here, or click to browse". */
+  subtitle: string;
 }
 
 const VIDEO_ACCEPT: FilePickerAcceptType[] = [
@@ -37,7 +39,8 @@ const VIDEO_ACCEPT: FilePickerAcceptType[] = [
 export function DropZone({
   onFile,
   onFileHandle,
-  hasRestoredSubtitles,
+  title,
+  subtitle,
 }: DropZoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -85,14 +88,8 @@ export function DropZone({
           dragging ? "border-blue-500 bg-blue-500/10" : "border-neutral-600"
         }`}
       >
-        <p className="text-lg font-medium text-neutral-100">
-          {hasRestoredSubtitles
-            ? "Your subtitles were restored — pick the same video file to continue"
-            : "Pick your video to begin"}
-        </p>
-        <p className="text-sm text-neutral-400">
-          Drop a video file here, or click to browse
-        </p>
+        <p className="text-lg font-medium text-neutral-100">{title}</p>
+        <p className="text-sm text-neutral-400">{subtitle}</p>
       </button>
       <input
         ref={inputRef}

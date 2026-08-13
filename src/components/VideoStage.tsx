@@ -17,7 +17,9 @@ interface VideoStageProps {
   videoReconnect: { name: string; handle: FileSystemFileHandle } | null;
   onReconnectVideo: () => void;
   onCancelReconnect: () => void;
-  hasRestoredSubtitles: boolean;
+  /** Labels for the embedded DropZone when no video is loaded. */
+  dropZoneTitle?: string;
+  dropZoneSubtitle?: string;
   lines: SubtitleWithEnd[];
   isPlaying: boolean;
   onVideoPlay: () => void;
@@ -34,7 +36,8 @@ export function VideoStage({
   videoReconnect,
   onReconnectVideo,
   onCancelReconnect,
-  hasRestoredSubtitles,
+  dropZoneTitle,
+  dropZoneSubtitle,
   lines,
   isPlaying,
   onVideoPlay,
@@ -101,7 +104,10 @@ export function VideoStage({
         <DropZone
           onFile={onFile}
           onFileHandle={onFileHandle}
-          hasRestoredSubtitles={hasRestoredSubtitles}
+          title={dropZoneTitle ?? "Load the video for this project"}
+          subtitle={
+            dropZoneSubtitle ?? "Drop a video file here, or click to browse"
+          }
         />
       )}
     </div>
