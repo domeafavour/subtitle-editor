@@ -8,6 +8,7 @@ import { SubtitleList } from "#/components/SubtitleList";
 import { Timeline } from "#/components/Timeline";
 import { Toolbar } from "#/components/Toolbar";
 import { VideoStage } from "#/components/VideoStage";
+import { useActiveLine } from "#/hooks/useActiveLine";
 import { useGlobalShortcuts } from "#/hooks/useGlobalShortcuts";
 import { usePlayback } from "#/hooks/usePlayback";
 import { useProjectSubtitles } from "#/hooks/useProjectSubtitles";
@@ -59,6 +60,8 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
         : (lines[lines.length - 1]?.endMs ?? 0),
     [playback.videoDuration, lines],
   );
+  // The line containing the video's current time (highlighted in the list).
+  const activeLine = useActiveLine(lines, playback.videoRef);
 
   // `[` seeks to the previous line's start (vim `b`), `]` to the current
   // line's end (vim `e`). Both end paused (no auto-play).
@@ -163,6 +166,7 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
           <SubtitleList
             lines={lines}
             videoLoaded={playback.videoUrl != null}
+            activeId={activeLine?.id ?? null}
             onPlayRange={playback.playRange}
             onJumpTo={playback.seekTo}
             onUpdateText={subs.updateText}
