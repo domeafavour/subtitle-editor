@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { isMeaningful, sanitizeText } from "#/lib/text";
 import type { Draft } from "#/lib/types";
+import { readStoredHandle, storeHandle } from "#/lib/videoHandleStore";
 
 export interface PlaybackApi {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -11,6 +12,19 @@ export interface PlaybackApi {
   isPlaying: boolean;
   draft: Draft | null;
   loadVideo: (file: File) => void;
+  /** Load a video picked via the File System Access API and persist its handle. */
+  loadVideoHandle: (handle: FileSystemFileHandle) => void;
+  /** True while re-opening the previously picked video after a reload. */
+  restoringVideo: boolean;
+  /**
+   * A stored video handle that needs a permission re-grant (a user gesture)
+   * before it can be reopened after a reload.
+   */
+  videoReconnect: { name: string; handle: FileSystemFileHandle } | null;
+  /** Re-grant access to the stored handle — must be called from a click. */
+  reconnectVideo: () => void;
+  /** Dismiss the reconnect prompt and fall back to the picker. */
+  cancelReconnect: () => void;
   togglePlayPause: () => void;
   /** Seek to `startMs` and play, pausing automatically when `endMs` is reached. */
   playRange: (startMs: number, endMs: number) => void;
@@ -44,8 +58,15 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     startMs: number;
     endMs: number;
   } | null>(null);
+  const [restoringVideo, setRestoringVideo] = useState(false);
+  const [videoReconnect, setVideoReconnect] = useState<{
+    name: string;
+    handle: FileSystemFileHandle;
+  } | null>(null);
 
   const draftRef = useRef<Draft | null>(null);
+  const videoReconnectRef = useRef(videoReconnect);
+  videoReconnectRef.current = videoReconnect;
   draftRef.current = draft;
   // Set just before a range-triggered pause so that pause does not open a draft.
   const suppressDraftRef = useRef(false);
@@ -61,6 +82,23 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     });
     setVideoName(file.name);
     setDraft(null);
+  }, []);
+
+  const loadVideoHandle = useCallback((handle: FileSystemFileHandle) => {
+    void (async () => {
+      try {
+        const file = await handle.getFile();
+        setVideoUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(file);
+        });
+        setVideoName(file.name);
+        setDraft(null);
+        void storeHandle(handle);
+      } catch {
+        // The file is no longer accessible — nothing to load.
+      }
+    })();
   }, []);
 
   const togglePlayPause = useCallback(() => {
@@ -139,6 +177,75 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     };
   }, []);
 
+  // Re-open the previously picked video after a reload. A handle restored from
+  // IndexedDB does not keep its permission, so when the state is "prompt" we
+  // surface a reconnect action instead of failing silently.
+  useEffect(() => {
+    let cancelled = false;
+    setRestoringVideo(true);
+    void (async () => {
+      try {
+        const handle = await readStoredHandle();
+        if (cancelled || !handle) return;
+        // Try to reopen directly first — Chrome may still hold the grant for a
+        // same-session reload. If that throws, the permission was reset, and we
+        // offer a one-click reconnect (requestPermission needs a user gesture).
+        let loaded = false;
+        try {
+          const file = await handle.getFile();
+          if (!cancelled) {
+            setVideoName(file.name);
+            setVideoUrl(URL.createObjectURL(file));
+            loaded = true;
+          }
+        } catch {
+          // Permission likely reset — offer reconnect below.
+        }
+        if (!loaded && !cancelled) {
+          const permission = await handle
+            .queryPermission()
+            .catch(() => "prompt");
+          if (permission !== "denied") {
+            setVideoReconnect({ name: handle.name, handle });
+          }
+        }
+      } catch {
+        // Handle unusable — fall back to the picker.
+      } finally {
+        if (!cancelled) setRestoringVideo(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const reconnectVideo = useCallback(() => {
+    void (async () => {
+      const current = videoReconnectRef.current;
+      if (!current) return;
+      try {
+        const permission = await current.handle.requestPermission();
+        if (permission !== "granted") return;
+        const file = await current.handle.getFile();
+        setVideoUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(file);
+        });
+        setVideoName(file.name);
+        setDraft(null);
+      } catch {
+        // Permission declined or the file is gone.
+      } finally {
+        setVideoReconnect(null);
+      }
+    })();
+  }, []);
+
+  const cancelReconnect = useCallback(() => {
+    setVideoReconnect(null);
+  }, []);
+
   return {
     videoRef,
     videoUrl,
@@ -146,6 +253,11 @@ export function usePlayback({ add }: UsePlaybackOptions): PlaybackApi {
     isPlaying,
     draft,
     loadVideo,
+    loadVideoHandle,
+    restoringVideo,
+    videoReconnect,
+    reconnectVideo,
+    cancelReconnect,
     togglePlayPause,
     playRange,
     commitDraft,
