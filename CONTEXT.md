@@ -51,8 +51,11 @@ never stored.
 _Avoid_: sequence, index
 
 **Blob video**:
-The local video file played through an in-memory object URL. It exists only for
-the current session and must be re-picked after a reload.
+The local video file played through an in-memory object URL. A reference to the
+picked file (a File System Access API handle) is persisted in IndexedDB so a
+reload can re-open it; a one-click reconnect may be needed to re-grant access
+after a reload. Drag-dropped files and browsers without that API fall back to
+re-picking.
 _Avoid_: upload, asset
 
 **Export**:
