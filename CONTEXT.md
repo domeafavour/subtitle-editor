@@ -57,6 +57,12 @@ _Avoid_: save, add
 Adjusting a subtitle's start time by a fixed ±0.1s step.
 _Avoid_: shift, retime
 
+**Jump**:
+Moving the paused playhead without starting playback. `[` seeks to the previous
+line's start (like vim `b`); `]` seeks to the current line's end (like vim `e`).
+The per-row `⟪` / `⟫` buttons jump to that line's own start / end.
+_Avoid_: seek, scrub-to-line
+
 **Line order**:
 The chronological ordering of subtitles. Always derived from start times;
 never stored.
