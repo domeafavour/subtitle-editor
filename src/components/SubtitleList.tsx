@@ -5,6 +5,8 @@ import { SubtitleRow } from "./SubtitleRow";
 interface SubtitleListProps {
   lines: SubtitleWithEnd[];
   videoLoaded: boolean;
+  /** Id of the line containing the video's current time, if any. */
+  activeId: string | null;
   onPlayRange: (startMs: number, endMs: number) => void;
   onJumpTo: (ms: number) => void;
   onUpdateText: (id: string, text: string) => void;
@@ -17,6 +19,7 @@ interface SubtitleListProps {
 export function SubtitleList({
   lines,
   videoLoaded,
+  activeId,
   onPlayRange,
   onJumpTo,
   onUpdateText,
@@ -39,6 +42,7 @@ export function SubtitleList({
           key={line.id}
           line={line}
           videoLoaded={videoLoaded}
+          active={line.id === activeId}
           onPlayRange={onPlayRange}
           onJumpTo={onJumpTo}
           onUpdateText={onUpdateText}

@@ -12,6 +12,8 @@ interface SubtitleRowProps {
   line: SubtitleWithEnd;
   /** False when no video is loaded — the play action is a no-op then. */
   videoLoaded: boolean;
+  /** True when this line contains the video's current time. */
+  active: boolean;
   onPlayRange: (startMs: number, endMs: number) => void;
   /** Seek to an absolute time (line start/end) without playing. */
   onJumpTo: (ms: number) => void;
@@ -30,6 +32,7 @@ interface SubtitleRowProps {
 export function SubtitleRow({
   line,
   videoLoaded,
+  active,
   onPlayRange,
   onJumpTo,
   onUpdateText,
@@ -93,7 +96,13 @@ export function SubtitleRow({
   const manual = line.manualEndMs != null;
 
   return (
-    <li className="group flex items-start gap-3 rounded border border-neutral-800 bg-neutral-900 px-3 py-2">
+    <li
+      className={`group flex items-start gap-3 rounded border px-3 py-2 transition-colors ${
+        active
+          ? "border-blue-500 bg-blue-500/10"
+          : "border-neutral-800 bg-neutral-900"
+      }`}
+    >
       {!editingText && (
         <button
           type="button"
