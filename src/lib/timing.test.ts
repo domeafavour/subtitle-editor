@@ -4,6 +4,7 @@ import {
   baseDurationMs,
   effectiveEndMs,
   lineAtPosition,
+  lineContaining,
   previousLineStartMs,
   sortedWithEnds,
 } from "./timing";
@@ -237,5 +238,54 @@ describe("previousLineStartMs", () => {
 
   it("returns null for an empty list", () => {
     expect(previousLineStartMs([], 0)).toBeNull();
+  });
+});
+
+describe("lineContaining", () => {
+  const fixture: SubtitleWithEnd[] = [
+    { id: "a", startMs: 0, text: "a", endMs: 1000 },
+    { id: "b", startMs: 2000, text: "b", endMs: 3000 },
+    { id: "c", startMs: 4000, text: "c", endMs: 5000 },
+  ];
+
+  it("returns the line containing the position (start inclusive)", () => {
+    expect(lineContaining(fixture, 0)?.id).toBe("a");
+    expect(lineContaining(fixture, 999)?.id).toBe("a");
+    expect(lineContaining(fixture, 2500)?.id).toBe("b");
+  });
+
+  it("returns null at a boundary that falls in a gap", () => {
+    expect(lineContaining(fixture, 1000)).toBeNull();
+    expect(lineContaining(fixture, 3000)).toBeNull();
+  });
+
+  it("returns the next line at a boundary contiguous with it", () => {
+    const contiguous: SubtitleWithEnd[] = [
+      { id: "a", startMs: 0, text: "a", endMs: 1000 },
+      { id: "b", startMs: 1000, text: "b", endMs: 2000 },
+    ];
+    expect(lineContaining(contiguous, 1000)?.id).toBe("b");
+  });
+
+  it("returns null in a gap between lines", () => {
+    expect(lineContaining(fixture, 1500)).toBeNull();
+    expect(lineContaining(fixture, 3500)).toBeNull();
+  });
+
+  it("returns null before the first line", () => {
+    const late: SubtitleWithEnd[] = [
+      { id: "x", startMs: 2000, text: "x", endMs: 3000 },
+      { id: "y", startMs: 4000, text: "y", endMs: 5000 },
+    ];
+    expect(lineContaining(late, 0)).toBeNull();
+  });
+
+  it("returns null past the last line", () => {
+    expect(lineContaining(fixture, 5000)).toBeNull();
+    expect(lineContaining(fixture, 99_999)).toBeNull();
+  });
+
+  it("returns null for an empty list", () => {
+    expect(lineContaining([], 0)).toBeNull();
   });
 });

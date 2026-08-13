@@ -58,6 +58,18 @@ export function sortedWithEnds(
 }
 
 /**
+ * The line whose `[startMs, endMs)` range strictly contains `tMs`. Returns
+ * null in a gap, before the first line, past the last line, or for an empty
+ * list. `lines` must be sorted and non-overlapping (as `sortedWithEnds`).
+ */
+export function lineContaining(
+  lines: SubtitleWithEnd[],
+  tMs: number,
+): SubtitleWithEnd | null {
+  return lines.find((line) => line.startMs <= tMs && line.endMs > tMs) ?? null;
+}
+
+/**
  * The line at video position `tMs`, using `[startMs, endMs)` ranges (end is
  * exclusive). Returns the line whose range contains `tMs`; when `tMs` sits in
  * a gap (or before the first line) returns the next line; past the last line
@@ -69,9 +81,8 @@ export function lineAtPosition(
   lines: SubtitleWithEnd[],
   tMs: number,
 ): SubtitleWithEnd | null {
-  for (const line of lines) {
-    if (line.startMs <= tMs && line.endMs > tMs) return line;
-  }
+  const containing = lineContaining(lines, tMs);
+  if (containing) return containing;
   for (const line of lines) {
     if (line.endMs > tMs) return line; // in a gap: the line that starts next
   }
