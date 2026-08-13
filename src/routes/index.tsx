@@ -16,7 +16,8 @@ export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
   const { settings, update } = useSettings();
-  const { subtitles, add, updateText, nudgeStart, remove } = useSubtitles();
+  const { subtitles, add, updateText, setManualEnd, nudgeStart, remove } =
+    useSubtitles();
   const playback = usePlayback({ add });
   useGlobalShortcuts(playback);
 
@@ -68,6 +69,7 @@ function Home() {
             videoLoaded={playback.videoUrl != null}
             onPlayRange={playback.playRange}
             onUpdateText={updateText}
+            onSetManualEnd={setManualEnd}
             onNudge={nudgeStart}
             onDelete={remove}
           />
