@@ -60,6 +60,8 @@ function Home() {
           <SettingsPanel settings={settings} onChange={update} />
           <SubtitleList
             lines={lines}
+            videoLoaded={playback.videoUrl != null}
+            onPlayRange={playback.playRange}
             onUpdateText={updateText}
             onNudge={nudgeStart}
             onDelete={remove}
