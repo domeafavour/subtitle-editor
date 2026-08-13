@@ -1,8 +1,9 @@
 # Subtitle Editor
 
 A browser app for writing subtitles by hand: a local video plays, and each
-subtitle is typed at the moment the video is paused. The end time is inferred
-from how long the line is by default, and can be overridden per line.
+subtitle is typed at the moment the video is paused. Projects group a video
+with its own subtitle list. The end time is inferred from how long the line is
+by default, and can be overridden per line.
 
 ## Language
 
@@ -61,12 +62,33 @@ The chronological ordering of subtitles. Always derived from start times;
 never stored.
 _Avoid_: sequence, index
 
+**Project**:
+A named bundle of one video's subtitles: a stable id, a display name (defaults
+to the video's base name, renamable), the original video file name, a creation
+time, and the subtitle list. Stored in the project collection.
+_Avoid_: video, session, job
+
+**Project list**:
+The app's home route; create a project by picking a video, and open or delete
+existing projects.
+_Avoid_: dashboard, home
+
+**Project editor**:
+The per-project route; the editor, scoped to one project's video and subtitles.
+_Avoid_: workspace, session
+
+**Migration**:
+The one-time move of pre-project data (the retired `subtitle-editor.subtitles.v1`
+list and the legacy IndexedDB `video` handle) into a project on first load.
+Idempotent; the legacy keys are cleared as the commit point.
+_Avoid_: upgrade, import
+
 **Blob video**:
 The local video file played through an in-memory object URL. A reference to the
-picked file (a File System Access API handle) is persisted in IndexedDB so a
-reload can re-open it; a one-click reconnect may be needed to re-grant access
-after a reload. Drag-dropped files and browsers without that API fall back to
-re-picking.
+picked file (a File System Access API handle) is persisted in IndexedDB keyed
+by the project id, so a reload can re-open that project's video; a one-click
+reconnect may be needed to re-grant access after a reload. Drag-dropped files
+and browsers without that API fall back to re-picking.
 _Avoid_: upload, asset
 
 **Export**:
