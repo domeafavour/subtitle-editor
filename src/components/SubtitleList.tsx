@@ -7,6 +7,7 @@ interface SubtitleListProps {
   videoLoaded: boolean;
   onPlayRange: (startMs: number, endMs: number) => void;
   onUpdateText: (id: string, text: string) => void;
+  onSetManualEnd: (id: string, endMs: number | null) => void;
   onNudge: (id: string, deltaMs: number) => void;
   onDelete: (id: string) => void;
 }
@@ -17,6 +18,7 @@ export function SubtitleList({
   videoLoaded,
   onPlayRange,
   onUpdateText,
+  onSetManualEnd,
   onNudge,
   onDelete,
 }: SubtitleListProps) {
@@ -37,6 +39,7 @@ export function SubtitleList({
           videoLoaded={videoLoaded}
           onPlayRange={onPlayRange}
           onUpdateText={onUpdateText}
+          onSetManualEnd={onSetManualEnd}
           onNudge={onNudge}
           onDelete={onDelete}
         />

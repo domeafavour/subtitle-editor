@@ -1,7 +1,11 @@
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
-import { formatTimestamp } from "#/lib/format";
+import {
+  formatEndSeconds,
+  formatTimestamp,
+  parseSecondsToMs,
+} from "#/lib/format";
 import type { SubtitleWithEnd } from "#/lib/types";
 
 interface SubtitleRowProps {
@@ -10,56 +14,91 @@ interface SubtitleRowProps {
   videoLoaded: boolean;
   onPlayRange: (startMs: number, endMs: number) => void;
   onUpdateText: (id: string, text: string) => void;
+  /** Set a manual end override (ms) or clear it (null → automatic). */
+  onSetManualEnd: (id: string, endMs: number | null) => void;
   onNudge: (id: string, deltaMs: number) => void;
   onDelete: (id: string) => void;
 }
 
 /**
- * One subtitle in the list. The body (start · text · end) is a button that
- * plays the line's range; editing moves to the pencil, nudge/delete stay as
- * separate controls.
+ * One subtitle in the list. The body (start · text) is a button that plays the
+ * line's range; the end time is a separate click-to-edit (seconds) with a
+ * reset-to-automatic control when overridden. Nudge/delete stay as controls.
  */
 export function SubtitleRow({
   line,
   videoLoaded,
   onPlayRange,
   onUpdateText,
+  onSetManualEnd,
   onNudge,
   onDelete,
 }: SubtitleRowProps) {
-  const [editing, setEditing] = useState(false);
+  const [editingText, setEditingText] = useState(false);
   const [editValue, setEditValue] = useState(line.text);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  useEffect(() => {
-    if (editing) textareaRef.current?.focus();
-  }, [editing]);
+  const [editingEnd, setEditingEnd] = useState(false);
+  const [endEditValue, setEndEditValue] = useState("");
+  const endInputRef = useRef<HTMLInputElement | null>(null);
 
-  const save = () => {
-    setEditing(false);
+  useEffect(() => {
+    if (editingText) textareaRef.current?.focus();
+  }, [editingText]);
+
+  useEffect(() => {
+    if (editingEnd) endInputRef.current?.focus();
+  }, [editingEnd]);
+
+  const saveText = () => {
+    setEditingText(false);
     if (editValue.trim().length > 0) onUpdateText(line.id, editValue);
   };
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleTextKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      save();
+      saveText();
     } else if (event.key === "Escape") {
       event.preventDefault();
-      setEditing(false);
+      setEditingText(false);
     }
   };
 
+  const startEndEdit = () => {
+    // Prefill from the stored override when present, else the effective end.
+    setEndEditValue(formatEndSeconds(line.manualEndMs ?? line.endMs));
+    setEditingEnd(true);
+  };
+
+  const saveEnd = () => {
+    const ms = parseSecondsToMs(endEditValue);
+    if (ms != null && ms > line.startMs) onSetManualEnd(line.id, ms);
+    setEditingEnd(false);
+  };
+
+  const handleEndKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveEnd();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setEditingEnd(false);
+    }
+  };
+
+  const manual = line.manualEndMs != null;
+
   return (
     <li className="group flex items-start gap-3 rounded border border-neutral-800 bg-neutral-900 px-3 py-2">
-      {editing ? (
+      {editingText ? (
         <textarea
           ref={textareaRef}
           value={editValue}
           rows={2}
           onChange={(event) => setEditValue(event.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={save}
+          onKeyDown={handleTextKeyDown}
+          onBlur={saveText}
           className="min-w-0 flex-1 resize-none rounded border border-blue-500 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 outline-none"
         />
       ) : (
@@ -80,18 +119,54 @@ export function SubtitleRow({
           <span className="min-w-0 flex-1 pt-1 text-sm text-neutral-100">
             {line.text}
           </span>
-          <span className="w-16 shrink-0 pt-1.5 font-mono text-xs text-neutral-400">
-            {formatTimestamp(line.endMs)}
-          </span>
         </button>
       )}
+
+      {editingEnd ? (
+        <input
+          ref={endInputRef}
+          type="text"
+          inputMode="decimal"
+          value={endEditValue}
+          onChange={(event) => setEndEditValue(event.target.value)}
+          onKeyDown={handleEndKeyDown}
+          onBlur={saveEnd}
+          aria-label="End time in seconds"
+          className="w-24 shrink-0 rounded border border-blue-500 bg-neutral-800 px-2 py-1 font-mono text-xs text-neutral-100 outline-none"
+        />
+      ) : (
+        <div className="flex w-24 shrink-0 items-center gap-1 pt-1.5">
+          <button
+            type="button"
+            onClick={startEndEdit}
+            title={manual ? "End time (manual)" : "End time (automatic)"}
+            className={`flex-1 rounded px-1 py-0.5 font-mono text-xs hover:bg-neutral-800 ${
+              manual ? "text-blue-300" : "text-neutral-400"
+            }`}
+          >
+            {manual && <span aria-hidden="true">● </span>}
+            {formatTimestamp(line.endMs)}
+          </button>
+          {manual && (
+            <button
+              type="button"
+              onClick={() => onSetManualEnd(line.id, null)}
+              title="Reset to automatic end"
+              className="rounded px-1 py-0.5 text-xs text-neutral-500 hover:bg-neutral-800 hover:text-neutral-100"
+            >
+              ⟳
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex shrink-0 gap-1 pt-1">
-        {!editing && (
+        {!editingText && !editingEnd && (
           <button
             type="button"
             onClick={() => {
               setEditValue(line.text);
-              setEditing(true);
+              setEditingText(true);
             }}
             title="Edit text"
             className="rounded px-1.5 py-0.5 text-xs text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
