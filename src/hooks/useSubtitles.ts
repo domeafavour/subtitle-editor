@@ -11,6 +11,8 @@ export interface SubtitlesApi {
   subtitles: Subtitle[];
   add: (startMs: number, text: string) => void;
   updateText: (id: string, text: string) => void;
+  /** Set a manual end override (ms) or clear it (null → automatic). */
+  setManualEnd: (id: string, endMs: number | null) => void;
   nudgeStart: (id: string, deltaMs: number) => void;
   remove: (id: string) => void;
 }
@@ -53,14 +55,39 @@ export function useSubtitles(): SubtitlesApi {
     [setSubtitles],
   );
 
+  const setManualEnd = useCallback(
+    (id: string, endMs: number | null) => {
+      setSubtitles((prev) =>
+        prev.map((sub) => {
+          if (sub.id !== id) return sub;
+          if (endMs == null) {
+            const { manualEndMs, ...rest } = sub;
+            return rest;
+          }
+          if (!Number.isFinite(endMs) || Math.round(endMs) <= sub.startMs) {
+            return sub;
+          }
+          return { ...sub, manualEndMs: Math.round(endMs) };
+        }),
+      );
+    },
+    [setSubtitles],
+  );
+
   const nudgeStart = useCallback(
     (id: string, deltaMs: number) => {
       setSubtitles((prev) =>
-        prev.map((sub) =>
-          sub.id === id
-            ? { ...sub, startMs: Math.max(0, sub.startMs + deltaMs) }
-            : sub,
-        ),
+        prev.map((sub) => {
+          if (sub.id !== id) return sub;
+          const startMs = Math.max(0, sub.startMs + deltaMs);
+          // A start moved past the override would violate `manualEndMs > startMs`
+          // (and be dropped on reload) — clear the override instead.
+          if (sub.manualEndMs != null && startMs >= sub.manualEndMs) {
+            const { manualEndMs, ...rest } = sub;
+            return { ...rest, startMs };
+          }
+          return { ...sub, startMs };
+        }),
       );
     },
     [setSubtitles],
@@ -73,5 +100,5 @@ export function useSubtitles(): SubtitlesApi {
     [setSubtitles],
   );
 
-  return { subtitles, add, updateText, nudgeStart, remove };
+  return { subtitles, add, updateText, setManualEnd, nudgeStart, remove };
 }
