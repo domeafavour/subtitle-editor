@@ -30,6 +30,8 @@ export interface PlaybackApi {
   togglePlayPause: () => void;
   /** Seek to `startMs` and play, pausing automatically when `endMs` is reached. */
   playRange: (startMs: number, endMs: number) => void;
+  /** Seek to `ms` (video ms) and end paused. Clamps to 0; no-op without a video. */
+  seekTo: (ms: number) => void;
   commitDraft: (text: string) => void;
   cancelDraft: () => void;
   /** Attach to the `<video>` element's onLoadedMetadata. */
@@ -146,6 +148,16 @@ export function usePlayback({
     setActiveRange({ startMs, endMs });
     video.currentTime = startMs / 1000;
     void video.play();
+  }, []);
+
+  const seekTo = useCallback((ms: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = Math.max(0, ms) / 1000;
+    // Always pause: a no-op pause() fires no pause event when already paused
+    // (no spurious draft), and it aborts a pending play() so a jump never
+    // auto-plays.
+    video.pause();
   }, []);
 
   const handleVideoMetadata = useCallback(() => {
@@ -288,6 +300,7 @@ export function usePlayback({
     cancelReconnect,
     togglePlayPause,
     playRange,
+    seekTo,
     commitDraft,
     cancelDraft,
     handleVideoMetadata,
