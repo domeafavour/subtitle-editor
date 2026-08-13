@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { baseDurationMs, effectiveEndMs, sortedWithEnds } from "./timing";
-import type { Settings, Subtitle } from "./types";
+import {
+  baseDurationMs,
+  effectiveEndMs,
+  lineAtPosition,
+  previousLineStartMs,
+  sortedWithEnds,
+} from "./timing";
+import type { Settings, Subtitle, SubtitleWithEnd } from "./types";
 
 const settings: Settings = {
   charsPerSec: 15,
@@ -153,5 +159,83 @@ describe("sortedWithEnds", () => {
     expect(result[0].manualEndMs).toBe(5_000);
     expect(result[1].endMs).toBe(4_000);
     expect(result[1].manualEndMs).toBeUndefined();
+  });
+});
+
+describe("lineAtPosition", () => {
+  const fixture: SubtitleWithEnd[] = [
+    { id: "a", startMs: 0, text: "a", endMs: 1000 },
+    { id: "b", startMs: 2000, text: "b", endMs: 3000 },
+    { id: "c", startMs: 4000, text: "c", endMs: 5000 },
+  ];
+
+  it("returns the line containing the position (start inclusive)", () => {
+    expect(lineAtPosition(fixture, 0)?.id).toBe("a");
+    expect(lineAtPosition(fixture, 999)?.id).toBe("a");
+    expect(lineAtPosition(fixture, 2000)?.id).toBe("b");
+    expect(lineAtPosition(fixture, 2500)?.id).toBe("b");
+    expect(lineAtPosition(fixture, 4999)?.id).toBe("c");
+  });
+
+  it("treats the end as exclusive — the boundary belongs to the next line", () => {
+    expect(lineAtPosition(fixture, 1000)?.id).toBe("b");
+    expect(lineAtPosition(fixture, 3000)?.id).toBe("c");
+  });
+
+  it("returns the next line when the position is in a gap", () => {
+    expect(lineAtPosition(fixture, 1500)?.id).toBe("b");
+    expect(lineAtPosition(fixture, 3500)?.id).toBe("c");
+  });
+
+  it("returns the first line when before the first line", () => {
+    const late: SubtitleWithEnd[] = [
+      { id: "x", startMs: 2000, text: "x", endMs: 3000 },
+      { id: "y", startMs: 4000, text: "y", endMs: 5000 },
+    ];
+    expect(lineAtPosition(late, 0)?.id).toBe("x");
+    expect(lineAtPosition(late, 1999)?.id).toBe("x");
+  });
+
+  it("returns the last line past the last line", () => {
+    expect(lineAtPosition(fixture, 5000)?.id).toBe("c");
+    expect(lineAtPosition(fixture, 99_999)?.id).toBe("c");
+  });
+
+  it("returns null for an empty list", () => {
+    expect(lineAtPosition([], 0)).toBeNull();
+    expect(lineAtPosition([], 12_345)).toBeNull();
+  });
+});
+
+describe("previousLineStartMs", () => {
+  const fixture: SubtitleWithEnd[] = [
+    { id: "a", startMs: 0, text: "a", endMs: 1000 },
+    { id: "b", startMs: 2000, text: "b", endMs: 3000 },
+    { id: "c", startMs: 4000, text: "c", endMs: 5000 },
+  ];
+
+  it("returns the current line's start from inside it", () => {
+    expect(previousLineStartMs(fixture, 500)).toBe(0);
+    expect(previousLineStartMs(fixture, 999)).toBe(0);
+    expect(previousLineStartMs(fixture, 2500)).toBe(2000);
+  });
+
+  it("at a line's start moves to the previous line's start (vim b)", () => {
+    expect(previousLineStartMs(fixture, 2000)).toBe(0);
+    expect(previousLineStartMs(fixture, 4000)).toBe(2000);
+  });
+
+  it("in a gap returns the previous line's start", () => {
+    expect(previousLineStartMs(fixture, 1500)).toBe(0);
+    expect(previousLineStartMs(fixture, 3500)).toBe(2000);
+  });
+
+  it("returns null before or at the first line's start", () => {
+    expect(previousLineStartMs(fixture, 0)).toBeNull();
+    expect(previousLineStartMs(fixture, -100)).toBeNull();
+  });
+
+  it("returns null for an empty list", () => {
+    expect(previousLineStartMs([], 0)).toBeNull();
   });
 });

@@ -56,3 +56,45 @@ export function sortedWithEnds(
     endMs: effectiveEndMs(sub, sorted[i + 1]?.startMs ?? null, settings),
   }));
 }
+
+/**
+ * The line at video position `tMs`, using `[startMs, endMs)` ranges (end is
+ * exclusive). Returns the line whose range contains `tMs`; when `tMs` sits in
+ * a gap (or before the first line) returns the next line; past the last line
+ * returns the last line; an empty list returns null.
+ * `lines` must be sorted by start and non-overlapping (as `sortedWithEnds`
+ * produces) — this helper does not sort internally.
+ */
+export function lineAtPosition(
+  lines: SubtitleWithEnd[],
+  tMs: number,
+): SubtitleWithEnd | null {
+  for (const line of lines) {
+    if (line.startMs <= tMs && line.endMs > tMs) return line;
+  }
+  for (const line of lines) {
+    if (line.endMs > tMs) return line; // in a gap: the line that starts next
+  }
+  return lines.length > 0 ? lines[lines.length - 1] : null;
+}
+
+/**
+ * The line start strictly before video position `tMs` — a vim-`b`-like motion:
+ * from inside a line it returns that line's start; from a line's start (or a
+ * gap) it returns the previous line's start. Returns null when there is no
+ * line before `tMs`. `lines` must be sorted by start (as `sortedWithEnds`).
+ */
+export function previousLineStartMs(
+  lines: SubtitleWithEnd[],
+  tMs: number,
+): number | null {
+  let result: number | null = null;
+  for (const line of lines) {
+    if (line.startMs < tMs) {
+      result = line.startMs;
+    } else {
+      break; // sorted by start — no later line can be `< tMs`
+    }
+  }
+  return result;
+}
