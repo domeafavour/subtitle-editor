@@ -110,6 +110,18 @@ describe("projectsStore", () => {
     expect(projects[0]?.id).toBe("x");
   });
 
+  it("sets the timing offset, rounded, and rejects non-finite values", () => {
+    const store = createProjectsStore(memoryStorage());
+    const p = project();
+    store.trigger.createProject({ project: p });
+    store.trigger.setTimingOffset({ id: p.id, offsetMs: 1250.6 });
+    expect(store.getSnapshot().context.projects[0]?.timingOffsetMs).toBe(1251);
+
+    const before = store.getSnapshot().context.projects;
+    store.trigger.setTimingOffset({ id: p.id, offsetMs: Number.NaN });
+    expect(store.getSnapshot().context.projects).toBe(before);
+  });
+
   it("tracks the migration flag", () => {
     const store = createProjectsStore(memoryStorage());
     expect(store.getSnapshot().context.isMigrating).toBe(false);

@@ -214,6 +214,37 @@ describe("sortedWithEnds", () => {
     expect(result[1].endMs).toBe(4_000);
     expect(result[1].manualEndMs).toBeUndefined();
   });
+
+  it("shifts every line's times by the timing offset", () => {
+    const lines = [
+      manualSub("a", 0, "a".repeat(30), 5_000),
+      sub("b", 3_000, "b"),
+    ];
+    const result = sortedWithEnds(lines, settings, 1_000);
+    expect(result[0].startMs).toBe(1_000);
+    // A's override (5000) clamped to B's shifted start (4000).
+    expect(result[0].endMs).toBe(4_000);
+    expect(result[0].manualEndMs).toBe(6_000);
+    expect(result[1].startMs).toBe(4_000);
+    expect(result[1].endMs).toBe(5_000);
+    expect(result[1].manualEndMs).toBeUndefined();
+  });
+
+  it("clamps shifted starts at zero and keeps a positive duration", () => {
+    const lines = [sub("a", 500, "hello"), sub("b", 2_000, "hi")];
+    const result = sortedWithEnds(lines, settings, -1_000);
+    expect(result[0].startMs).toBe(0);
+    // endMs keeps the start + 1 floor even under a heavy negative offset.
+    expect(result[0].endMs).toBeGreaterThanOrEqual(1);
+    expect(result[1].startMs).toBe(1_000);
+  });
+
+  it("leaves lines unchanged with a zero offset", () => {
+    const lines = [sub("a", 500, "hello"), sub("b", 2_000, "hi")];
+    expect(sortedWithEnds(lines, settings, 0)).toEqual(
+      sortedWithEnds(lines, settings),
+    );
+  });
 });
 
 describe("lineAtPosition", () => {

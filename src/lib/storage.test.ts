@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseSettings, parseSubtitles } from "./storage";
+import { parseProjects, parseSettings, parseSubtitles } from "./storage";
 
 describe("parseSubtitles", () => {
   it("preserves a valid manualEndMs override", () => {
@@ -109,5 +109,39 @@ describe("parseSettings", () => {
       maxDurationSec: 8,
       endMode: "speech",
     });
+  });
+});
+
+describe("parseProjects", () => {
+  it("keeps a finite rounded timing offset", () => {
+    const [result] = parseProjects([
+      {
+        id: "a",
+        name: "P",
+        videoName: "",
+        createdAt: 0,
+        subtitles: [],
+        timingOffsetMs: 1234.6,
+      },
+    ]);
+    expect(result?.timingOffsetMs).toBe(1235);
+  });
+
+  it("omits a missing or invalid timing offset (reads as 0)", () => {
+    const [missing] = parseProjects([
+      { id: "a", name: "P", videoName: "", createdAt: 0, subtitles: [] },
+    ]);
+    const [invalid] = parseProjects([
+      {
+        id: "b",
+        name: "P",
+        videoName: "",
+        createdAt: 0,
+        subtitles: [],
+        timingOffsetMs: Number.NaN,
+      },
+    ]);
+    expect(missing?.timingOffsetMs).toBeUndefined();
+    expect(invalid?.timingOffsetMs).toBeUndefined();
   });
 });
