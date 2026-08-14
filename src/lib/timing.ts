@@ -54,18 +54,30 @@ export function effectiveEndMs(
 /**
  * Subtitles sorted chronologically by start time (stable tiebreak by id), each
  * with its derived end time attached. Order is derived here — never stored.
+ *
+ * `offsetMs` shifts every line's displayed/exported times (a per-project
+ * timing offset): starts clamp at 0, ends keep the `start + 1` floor, and
+ * manual overrides shift along with their line. Stored captures are never
+ * rewritten — this is a reversible view transform.
  */
 export function sortedWithEnds(
   subtitles: Subtitle[],
   settings: Settings,
+  offsetMs = 0,
 ): SubtitleWithEnd[] {
   const sorted = [...subtitles].sort(
     (a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id),
   );
-  return sorted.map((sub, i) => ({
-    ...sub,
-    endMs: effectiveEndMs(sub, sorted[i + 1]?.startMs ?? null, settings),
-  }));
+  return sorted.map((sub, i) => {
+    const startMs = Math.max(0, sub.startMs + offsetMs);
+    const endMs = Math.max(
+      startMs + 1,
+      effectiveEndMs(sub, sorted[i + 1]?.startMs ?? null, settings) + offsetMs,
+    );
+    const line: SubtitleWithEnd = { ...sub, startMs, endMs };
+    if (sub.manualEndMs != null) line.manualEndMs = sub.manualEndMs + offsetMs;
+    return line;
+  });
 }
 
 /**

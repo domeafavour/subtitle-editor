@@ -74,15 +74,13 @@ export function parseProjects(raw: unknown): Project[] {
   const result: Project[] = [];
   for (const item of raw) {
     if (typeof item !== "object" || item === null) continue;
-    const { id, name, videoName, createdAt, subtitles } = item as Record<
-      string,
-      unknown
-    >;
+    const { id, name, videoName, createdAt, subtitles, timingOffsetMs } =
+      item as Record<string, unknown>;
     if (typeof id !== "string" || id.length === 0) continue;
     if (typeof name !== "string" || name.trim().length === 0) continue;
     if (seen.has(id)) continue;
     seen.add(id);
-    result.push({
+    const project: Project = {
       id,
       name,
       videoName: typeof videoName === "string" ? videoName : "",
@@ -91,7 +89,13 @@ export function parseProjects(raw: unknown): Project[] {
           ? createdAt
           : 0,
       subtitles: parseSubtitles(subtitles),
-    });
+    };
+    // Keep the timing offset only when it is a finite number; otherwise the
+    // project reads as offset 0 (no migration needed).
+    if (typeof timingOffsetMs === "number" && Number.isFinite(timingOffsetMs)) {
+      project.timingOffsetMs = Math.round(timingOffsetMs);
+    }
+    result.push(project);
   }
   return result;
 }

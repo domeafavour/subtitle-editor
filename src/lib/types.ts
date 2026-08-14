@@ -79,4 +79,10 @@ export interface Project {
   createdAt: number;
   /** The project's subtitles, in insertion order (display order derived). */
   subtitles: Subtitle[];
+  /**
+   * Optional per-project shift in integer ms applied to every line's displayed
+   * and exported times (see timing.ts). Stored captures are never rewritten —
+   * the offset is a reversible view transform; absent = 0.
+   */
+  timingOffsetMs?: number;
 }
