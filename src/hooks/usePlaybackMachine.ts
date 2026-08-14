@@ -35,6 +35,11 @@ export interface PlaybackApi {
   playRange: (startMs: number, endMs: number) => void;
   /** Seek to `ms` (video ms) and end paused. Clamps to 0; no-op without a video. */
   seekTo: (ms: number) => void;
+  /**
+   * Open the draft composer manually at the video's current position —
+   * pausing the video first when it is playing. No-op without a loaded video.
+   */
+  openDraftAtCurrentTime: () => void;
   commitDraft: (text: string) => void;
   cancelDraft: () => void;
   /** Attach to the `<video>` element's onLoadedMetadata. */
@@ -154,6 +159,20 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
   );
 
   const cancelDraft = useCallback(() => send({ type: "cancelDraft" }), [send]);
+
+  const openDraftAtCurrentTime = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !Number.isFinite(video.duration) || video.duration <= 0) {
+      return; // no video (or metadata) yet — nothing to capture.
+    }
+    // Pause first: while playing, the DOM pause event reaches the machine
+    // (`playing → paused` + openDraft) and re-anchors the draft to the pause
+    // position, which is the same spot — `currentTime` is frozen after
+    // `pause()`. While already paused, `pause()` fires no event (no spurious
+    // draft, matching `seekTo`).
+    video.pause();
+    send({ type: "openDraft", startMs: Math.round(video.currentTime * 1000) });
+  }, [send]);
 
   const handleVideoMetadata = useCallback(() => {
     const video = videoRef.current;
@@ -300,6 +319,7 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
     togglePlayPause,
     playRange,
     seekTo,
+    openDraftAtCurrentTime,
     commitDraft,
     cancelDraft,
     handleVideoMetadata,
