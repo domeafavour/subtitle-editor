@@ -52,10 +52,12 @@ describe("settingsStore", () => {
     const store = createSettingsStore(
       memoryStorage({ [STORAGE_KEYS.settings]: legacy }),
     );
+    // New fields default in: the end mode stays reading for legacy data.
     expect(store.getSnapshot().context.settings).toEqual({
       charsPerSec: 12,
       minDurationSec: 2,
       maxDurationSec: 8,
+      endMode: "reading",
     });
   });
 

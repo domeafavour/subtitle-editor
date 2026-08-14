@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseSubtitles } from "./storage";
+import { parseSettings, parseSubtitles } from "./storage";
 
 describe("parseSubtitles", () => {
   it("preserves a valid manualEndMs override", () => {
@@ -59,5 +59,55 @@ describe("parseSubtitles", () => {
       { id: "c", startMs: 1000, text: "   " },
     ]);
     expect(result).toEqual([]);
+  });
+
+  it("keeps a finite positive speechDurationMs", () => {
+    const [result] = parseSubtitles([
+      { id: "a", startMs: 1000, text: "Hi", speechDurationMs: 2500.6 },
+    ]);
+    expect(result?.speechDurationMs).toBe(2501);
+  });
+
+  it("drops an invalid speechDurationMs", () => {
+    const [zero] = parseSubtitles([
+      { id: "a", startMs: 1000, text: "Hi", speechDurationMs: 0 },
+    ]);
+    const [negative] = parseSubtitles([
+      { id: "a", startMs: 1000, text: "Hi", speechDurationMs: -5 },
+    ]);
+    const [nan] = parseSubtitles([
+      { id: "a", startMs: 1000, text: "Hi", speechDurationMs: Number.NaN },
+    ]);
+    expect(zero?.speechDurationMs).toBeUndefined();
+    expect(negative?.speechDurationMs).toBeUndefined();
+    expect(nan?.speechDurationMs).toBeUndefined();
+  });
+});
+
+describe("parseSettings", () => {
+  it("keeps a valid speech end mode", () => {
+    expect(parseSettings({ endMode: "speech" }).endMode).toBe("speech");
+  });
+
+  it("falls back to reading for a missing or invalid end mode", () => {
+    expect(parseSettings({}).endMode).toBe("reading");
+    expect(parseSettings({ endMode: "wat" }).endMode).toBe("reading");
+    expect(parseSettings(null).endMode).toBe("reading");
+  });
+
+  it("preserves the numeric fields alongside the mode", () => {
+    expect(
+      parseSettings({
+        charsPerSec: 20,
+        minDurationSec: 2,
+        maxDurationSec: 8,
+        endMode: "speech",
+      }),
+    ).toEqual({
+      charsPerSec: 20,
+      minDurationSec: 2,
+      maxDurationSec: 8,
+      endMode: "speech",
+    });
   });
 });

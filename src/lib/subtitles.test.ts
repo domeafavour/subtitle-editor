@@ -4,6 +4,7 @@ import {
   addSubtitle,
   nudgeSubtitleStart,
   removeSubtitle,
+  setSpeechDurationMs,
   setSubtitleManualEnd,
   updateSubtitleText,
 } from "./subtitles";
@@ -18,6 +19,11 @@ describe("addSubtitle", () => {
     const result = addSubtitle([sub("a")], 10.6, "New line");
     expect(result).toHaveLength(2);
     expect(result[1]).toMatchObject({ startMs: 11, text: "New line" });
+  });
+
+  it("uses the provided id when given", () => {
+    const result = addSubtitle([], 1000, "Hello", "my-line");
+    expect(result[0]?.id).toBe("my-line");
   });
 
   it("rejects empty/whitespace text and returns the same array", () => {
@@ -58,6 +64,31 @@ describe("setSubtitleManualEnd", () => {
     expect(
       setSubtitleManualEnd(list, "a", 500)[0]?.manualEndMs,
     ).toBeUndefined();
+  });
+});
+
+describe("setSpeechDurationMs", () => {
+  it("stores a rounded measured duration", () => {
+    const result = setSpeechDurationMs([sub("a")], "a", 2450.6);
+    expect(result[0]?.speechDurationMs).toBe(2451);
+  });
+
+  it("rejects non-positive or non-finite durations", () => {
+    const list = [sub("a")];
+    expect(
+      setSpeechDurationMs(list, "a", 0)[0]?.speechDurationMs,
+    ).toBeUndefined();
+    expect(
+      setSpeechDurationMs(list, "a", -5)[0]?.speechDurationMs,
+    ).toBeUndefined();
+    expect(
+      setSpeechDurationMs(list, "a", Number.NaN)[0]?.speechDurationMs,
+    ).toBeUndefined();
+  });
+
+  it("ignores unknown ids and returns the same array reference", () => {
+    const list = [sub("a")];
+    expect(setSpeechDurationMs(list, "nope", 1000)).toBe(list);
   });
 });
 

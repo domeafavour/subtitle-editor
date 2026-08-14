@@ -14,6 +14,7 @@ const settings: Settings = {
   charsPerSec: 15,
   minDurationSec: 1,
   maxDurationSec: 7,
+  endMode: "reading",
 };
 
 function sub(id: string, startMs: number, text: string): Subtitle {
@@ -47,6 +48,7 @@ describe("baseDurationMs", () => {
       charsPerSec: 15,
       minDurationSec: 7,
       maxDurationSec: 1,
+      endMode: "reading",
     };
     expect(baseDurationMs("a".repeat(30), swapped)).toBe(2000);
   });
@@ -56,6 +58,7 @@ describe("baseDurationMs", () => {
       charsPerSec: 0,
       minDurationSec: 1,
       maxDurationSec: 7,
+      endMode: "reading",
     };
     expect(baseDurationMs("hello", broken)).toBe(7000);
   });
@@ -117,6 +120,56 @@ describe("effectiveEndMs", () => {
     expect(
       effectiveEndMs(sub("a", 10_000, "a".repeat(30)), null, settings),
     ).toBe(12_000);
+  });
+});
+
+describe("effectiveEndMs — speech mode", () => {
+  const speechSettings: Settings = { ...settings, endMode: "speech" };
+
+  function spoken(id: string, startMs: number, text: string, duration: number) {
+    return { ...sub(id, startMs, text), speechDurationMs: duration };
+  }
+
+  it("uses the measured speech duration when present", () => {
+    expect(
+      effectiveEndMs(spoken("a", 10_000, "hello", 2_500), null, speechSettings),
+    ).toBe(12_500);
+  });
+
+  it("falls back to the reading estimate when unmeasured", () => {
+    expect(
+      effectiveEndMs(sub("a", 10_000, "a".repeat(30)), null, speechSettings),
+    ).toBe(12_000);
+  });
+
+  it("clamps to the next line's start and floors to a positive duration", () => {
+    expect(
+      effectiveEndMs(
+        spoken("a", 10_000, "hello", 2_500),
+        11_000,
+        speechSettings,
+      ),
+    ).toBe(11_000);
+    expect(effectiveEndMs(sub("a", 10_000, "x"), 10_000, speechSettings)).toBe(
+      10_001,
+    );
+  });
+
+  it("keeps the manual override in speech mode", () => {
+    expect(
+      effectiveEndMs(
+        { ...manualSub("a", 10_000, "x", 15_000), speechDurationMs: 2_500 },
+        null,
+        speechSettings,
+      ),
+    ).toBe(15_000);
+  });
+
+  it("ignores the speech duration in reading mode", () => {
+    // 5-char line at 15 chars/sec → clamped to the 1s minimum.
+    expect(
+      effectiveEndMs(spoken("a", 10_000, "hello", 2_500), null, settings),
+    ).toBe(11_000);
   });
 });
 
