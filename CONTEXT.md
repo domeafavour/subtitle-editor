@@ -19,11 +19,27 @@ captured. A non-negative integer. Captured, never inferred.
 _Avoid_: timestamp, timecode
 
 **End time**:
-The moment a subtitle stops being displayed. Derived from the reading estimate
-by default and clamped to the next subtitle's start; per-line overridable (see
-end override). Always floored to `start + 1` ms so SRT/VTT stay valid. Never
-stored — recomputed at render time.
+The moment a subtitle stops being displayed. Derived from the default end mode
+(reading estimate or measured speech duration) and clamped to the next
+subtitle's start; per-line overridable (see end override). Always floored to
+`start + 1` ms so SRT/VTT stay valid. Never stored — recomputed at render time.
 _Avoid_: duration
+
+**Default end mode**:
+The user setting that chooses how a new line's default end is derived:
+`reading` (the reading estimate) or `speech` (the line's measured speech
+duration). Switching it reflows every line that has no end override or
+measurement.
+_Avoid_: end strategy, timing mode
+
+**Speech duration**:
+A line's measured speaking time — how long the browser TTS takes to say its
+text, measured silently (volume 0) when the line is added or edited and stored
+per line as `speechDurationMs`. In speech mode it replaces the reading estimate
+for that line's default end; unmeasured lines (and measurement failures) fall
+back to the reading estimate. Machine/voice-specific; re-edit a line to
+re-measure.
+_Avoid_: spoken duration, TTS estimate
 
 **End override**:
 An optional user-entered end time stored on a line, in absolute video
@@ -36,7 +52,7 @@ _Avoid_: manual end, hard end, custom end
 **Reading estimate**:
 How long a line stays on screen so a viewer can read it: characters divided by
 the reading speed, clamped between minimum and maximum seconds. The default end
-when no end override is set.
+in `reading` mode, and the fallback for unmeasured lines in `speech` mode.
 _Avoid_: duration, hold time
 
 **Reading speed settings**:
