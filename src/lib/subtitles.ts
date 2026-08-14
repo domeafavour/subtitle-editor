@@ -7,18 +7,23 @@ import type { Subtitle } from "./types";
  * text) they return the same array reference so callers can skip re-renders.
  */
 
-/** Append a line. Rejects empty/whitespace text; rounds `startMs`. */
+/**
+ * Append a line. Rejects empty/whitespace text; rounds `startMs`. Pass `id`
+ * to control the new line's identity (e.g. so the caller can measure and
+ * store its speech duration afterwards); defaults to a random UUID.
+ */
 export function addSubtitle(
   subtitles: Subtitle[],
   startMs: number,
   text: string,
+  id?: string,
 ): Subtitle[] {
   const clean = sanitizeText(text);
   if (!isMeaningful(clean)) return subtitles;
   return [
     ...subtitles,
     {
-      id: crypto.randomUUID(),
+      id: id ?? crypto.randomUUID(),
       startMs: Math.max(0, Math.round(startMs)),
       text: clean,
     },
@@ -55,6 +60,26 @@ export function setSubtitleManualEnd(
     }
     return { ...sub, manualEndMs: Math.round(endMs) };
   });
+}
+
+/**
+ * Store a measured speech duration for a line (ms). Rejects non-positive or
+ * non-finite values and unknown ids (no-op → same array reference).
+ */
+export function setSpeechDurationMs(
+  subtitles: Subtitle[],
+  id: string,
+  ms: number,
+): Subtitle[] {
+  if (!Number.isFinite(ms) || ms <= 0) return subtitles;
+  const rounded = Math.round(ms);
+  let changed = false;
+  const next = subtitles.map((sub) => {
+    if (sub.id !== id || sub.speechDurationMs === rounded) return sub;
+    changed = true;
+    return { ...sub, speechDurationMs: rounded };
+  });
+  return changed ? next : subtitles;
 }
 
 /**

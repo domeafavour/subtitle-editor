@@ -7,8 +7,9 @@ import type { Settings, Subtitle, SubtitleWithEnd } from "./types";
  * edited, deleted, nudged, overridden, or the reading-speed settings change.
  *
  * The algorithm (ADR 0001 + ADR 0002):
- *   baseDuration = clamp(chars / charsPerSec, min, max)
- *   preferred    = manualEndMs ?? (start + baseDuration)
+ *   baseDuration = clamp(chars / charsPerSec, min, max)     // reading estimate
+ *   speech       = speechDurationMs ?? baseDuration          // speech mode
+ *   preferred    = manualEndMs ?? (mode === "speech" ? start + speech : start + baseDuration)
  *   end          = min(preferred, nextLine.start)     // never overlaps
  */
 
@@ -24,9 +25,10 @@ export function baseDurationMs(text: string, settings: Settings): number {
 
 /**
  * Effective end time for a subtitle: the `manualEndMs` override when set,
- * otherwise the reading-speed estimate. Always clamped to `nextStartMs` when
- * that is earlier (no overlaps), and floored to `start + 1` so SRT stays valid
- * even when two lines share the same start time.
+ * otherwise the default-end derivation — the measured `speechDurationMs`
+ * when the mode is `"speech"`, else the reading-speed estimate. Always
+ * clamped to `nextStartMs` when that is earlier (no overlaps), and floored to
+ * `start + 1` so SRT stays valid even when two lines share the same start.
  */
 export function effectiveEndMs(
   sub: Subtitle,
@@ -34,7 +36,16 @@ export function effectiveEndMs(
   settings: Settings,
 ): number {
   const estimate = sub.startMs + baseDurationMs(sub.text, settings);
-  const preferred = sub.manualEndMs != null ? sub.manualEndMs : estimate;
+  const speech =
+    sub.speechDurationMs != null
+      ? sub.startMs + sub.speechDurationMs
+      : estimate; // unmeasured line in speech mode → reading fallback
+  const preferred =
+    sub.manualEndMs != null
+      ? sub.manualEndMs
+      : settings.endMode === "speech"
+        ? speech
+        : estimate;
   const byNext =
     nextStartMs == null ? preferred : Math.min(preferred, nextStartMs);
   return Math.max(byNext, sub.startMs + 1);

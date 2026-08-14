@@ -14,6 +14,8 @@ export function defaultSettings(): Settings {
     charsPerSec: 15,
     minDurationSec: 1,
     maxDurationSec: 7,
+    // Reading-speed derivation stays the default; speech mode is opt-in.
+    endMode: "reading",
   };
 }
 
@@ -27,7 +29,10 @@ export function parseSubtitles(raw: unknown): Subtitle[] {
   const result: Subtitle[] = [];
   for (const item of raw) {
     if (typeof item !== "object" || item === null) continue;
-    const { id, startMs, text, manualEndMs } = item as Record<string, unknown>;
+    const { id, startMs, text, manualEndMs, speechDurationMs } = item as Record<
+      string,
+      unknown
+    >;
     if (typeof id !== "string" || id.length === 0) continue;
     if (
       typeof startMs !== "number" ||
@@ -39,10 +44,19 @@ export function parseSubtitles(raw: unknown): Subtitle[] {
     if (typeof text !== "string" || text.trim().length === 0) continue;
     const clean: Subtitle = { id, startMs: Math.round(startMs), text };
     // Keep the override only when it is a finite number later than the start;
-    // otherwise drop it → the end falls back to the reading-speed derivation.
+    // otherwise drop it → the end falls back to the default-end derivation.
     if (typeof manualEndMs === "number" && Number.isFinite(manualEndMs)) {
       const rounded = Math.round(manualEndMs);
       if (rounded > clean.startMs) clean.manualEndMs = rounded;
+    }
+    // Keep the measured speech duration only when it is a finite positive
+    // number; otherwise drop it → the reading estimate is the fallback.
+    if (
+      typeof speechDurationMs === "number" &&
+      Number.isFinite(speechDurationMs) &&
+      speechDurationMs > 0
+    ) {
+      clean.speechDurationMs = Math.round(speechDurationMs);
     }
     result.push(clean);
   }
@@ -86,14 +100,14 @@ export function parseProjects(raw: unknown): Project[] {
 export function parseSettings(raw: unknown): Settings {
   const fallback = defaultSettings();
   if (typeof raw !== "object" || raw === null) return fallback;
-  const { charsPerSec, minDurationSec, maxDurationSec } = raw as Record<
-    string,
-    unknown
-  >;
+  const { charsPerSec, minDurationSec, maxDurationSec, endMode } =
+    raw as Record<string, unknown>;
   return {
     charsPerSec: finiteNumber(charsPerSec) ?? fallback.charsPerSec,
     minDurationSec: finiteNumber(minDurationSec) ?? fallback.minDurationSec,
     maxDurationSec: finiteNumber(maxDurationSec) ?? fallback.maxDurationSec,
+    // Any value other than the literal "speech" falls back to "reading".
+    endMode: endMode === "speech" ? "speech" : "reading",
   };
 }
 

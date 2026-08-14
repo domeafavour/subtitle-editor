@@ -5,9 +5,10 @@
  * and there is no float-drift when comparing against `video.currentTime`.
  *
  * A subtitle's effective end time (`SubtitleWithEnd.endMs`) is never stored —
- * it is derived at render time from the line's start, text, the reading-speed
- * settings, and the next line's start, unless the line carries a `manualEndMs`
- * override. See timing.ts.
+ * it is derived at render time from the line's start, text, the default-end
+ * mode (reading-speed settings, or the measured speech duration), and the
+ * next line's start, unless the line carries a `manualEndMs` override. See
+ * timing.ts.
  */
 
 export interface Subtitle {
@@ -25,6 +26,14 @@ export interface Subtitle {
    * Persisted in the same localStorage key.
    */
   manualEndMs?: number;
+  /**
+   * Optional measured speaking time for this line's text, in integer
+   * milliseconds — how long the browser TTS takes to say it, measured
+   * silently when the line is added/edited (see speechDuration.ts). Only
+   * consulted when the default end mode is `"speech"`; absent → the reading
+   * estimate is the fallback. Persisted so reloads and exports reuse it.
+   */
+  speechDurationMs?: number;
 }
 
 export interface SubtitleWithEnd extends Subtitle {
@@ -43,6 +52,11 @@ export interface Settings {
   minDurationSec: number;
   /** Maximum on-screen duration in seconds. */
   maxDurationSec: number;
+  /**
+   * How a new line's default end is derived: the reading-speed estimate
+   * (`"reading"`) or the line's measured speech duration (`"speech"`).
+   */
+  endMode: "reading" | "speech";
 }
 
 /** An in-progress line captured at a pause point, not yet committed. */
