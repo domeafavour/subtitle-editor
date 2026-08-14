@@ -32,28 +32,4 @@ describe("toSrt", () => {
     const output = toSrt([line(1_000, "Line one\nLine two", 3_000)]);
     expect(output).toContain("\r\nLine one\r\nLine two\r\n");
   });
-
-  it("prefixes the body with the speaker on its own first line", () => {
-    const output = toSrt([
-      { id: "id", startMs: 1_000, text: "Hello", endMs: 3_000, speaker: "A" },
-    ]);
-    expect(output).toBe(
-      "1\r\n00:00:01,000 --> 00:00:03,000\r\n- A\r\nHello\r\n",
-    );
-  });
-
-  it("prefixes the speaker before multi-line text with CRLF endings", () => {
-    const output = toSrt([
-      {
-        id: "id",
-        startMs: 1_000,
-        text: "Line one\nLine two",
-        endMs: 3_000,
-        speaker: "B",
-      },
-    ]);
-    expect(output).toBe(
-      "1\r\n00:00:01,000 --> 00:00:03,000\r\n- B\r\nLine one\r\nLine two\r\n",
-    );
-  });
 });

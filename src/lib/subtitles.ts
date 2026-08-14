@@ -1,4 +1,3 @@
-import { nextSpeaker } from "./speaker";
 import { isMeaningful, sanitizeText } from "./text";
 import type { Subtitle } from "./types";
 
@@ -81,24 +80,4 @@ export function nudgeSubtitleStart(
 /** Remove a line by id. */
 export function removeSubtitle(subtitles: Subtitle[], id: string): Subtitle[] {
   return subtitles.filter((sub) => sub.id !== id);
-}
-
-/**
- * Advance a line's speaker label one step (`none → A → B → C → none`). The
- * label after C clears the speaker. No-op (same array reference) when the id
- * is absent.
- */
-export function cycleSubtitleSpeaker(
-  subtitles: Subtitle[],
-  id: string,
-): Subtitle[] {
-  return subtitles.map((sub) => {
-    if (sub.id !== id) return sub;
-    const speaker = nextSpeaker(sub.speaker);
-    if (speaker == null) {
-      const { speaker: _dropped, ...rest } = sub;
-      return rest;
-    }
-    return { ...sub, speaker };
-  });
 }

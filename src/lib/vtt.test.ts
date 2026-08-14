@@ -27,26 +27,4 @@ describe("toVtt", () => {
         "00:00:03.000 --> 00:00:05.000\nSecond\n",
     );
   });
-
-  it("wraps the cue body in a <v> voice tag when a speaker is set", () => {
-    const output = toVtt([
-      { id: "id", startMs: 1_000, text: "Hello", endMs: 3_000, speaker: "A" },
-    ]);
-    expect(output).toBe(
-      "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\n<v A>Hello</v>\n",
-    );
-  });
-
-  it("keeps the voice tag spanning internal newlines", () => {
-    const output = toVtt([
-      {
-        id: "id",
-        startMs: 1_000,
-        text: "Line one\nLine two",
-        endMs: 3_000,
-        speaker: "B",
-      },
-    ]);
-    expect(output).toContain("\n<v B>Line one\nLine two</v>\n");
-  });
 });

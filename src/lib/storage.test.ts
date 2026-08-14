@@ -52,36 +52,6 @@ describe("parseSubtitles", () => {
     expect(result?.manualEndMs).toBeUndefined();
   });
 
-  it("preserves a valid speaker", () => {
-    const [result] = parseSubtitles([
-      { id: "a", startMs: 1000, text: "Hi", speaker: "B" },
-    ]);
-    expect(result?.speaker).toBe("B");
-  });
-
-  it("drops a speaker that is not a known label", () => {
-    const lowercase = parseSubtitles([
-      { id: "a", startMs: 1000, text: "Hi", speaker: "a" },
-    ])[0];
-    const unknown = parseSubtitles([
-      { id: "a", startMs: 1000, text: "Hi", speaker: "D" },
-    ])[0];
-    expect(lowercase?.speaker).toBeUndefined();
-    expect(unknown?.speaker).toBeUndefined();
-  });
-
-  it("drops a non-string speaker", () => {
-    const [result] = parseSubtitles([
-      { id: "a", startMs: 1000, text: "Hi", speaker: 5 },
-    ]);
-    expect(result?.speaker).toBeUndefined();
-  });
-
-  it("keeps entries without a speaker as unassigned", () => {
-    const [result] = parseSubtitles([{ id: "a", startMs: 1000, text: "Hi" }]);
-    expect(result?.speaker).toBeUndefined();
-  });
-
   it("still drops entries with invalid core fields", () => {
     const result = parseSubtitles([
       { id: "", startMs: 1000, text: "Hi" },

@@ -1,9 +1,9 @@
 /**
  * Text-to-speech via the Web Speech API.
  *
- * A browser-side side-effect used by the per-line speaker button: clicking it
- * reads the line aloud so the user can hear it while assigning a speaker.
- * Degrades silently when the API is unavailable (SSR, unsupported browsers).
+ * A browser-side side-effect used by the per-line read-aloud button: clicking
+ * it reads the line's text aloud. Degrades silently when the API is
+ * unavailable (SSR, unsupported browsers).
  */
 
 /** Read `text` aloud. Cancels any ongoing utterance so rapid clicks don't queue. */
