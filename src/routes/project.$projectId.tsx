@@ -115,6 +115,7 @@ function EditorShell() {
     jumpToEnd,
     stepBackward,
     stepForward,
+    addLine: playback.openDraftAtCurrentTime,
   });
   const project = useProject();
 
