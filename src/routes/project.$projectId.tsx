@@ -4,7 +4,7 @@ import { useCallback, useMemo } from "react";
 import { ProjectHeader } from "#/components/ProjectHeader";
 import { SettingsPanel } from "#/components/SettingsPanel";
 import { SubtitleInput } from "#/components/SubtitleInput";
-import { SubtitleList } from "#/components/SubtitleList";
+import { SubtitleRow } from "#/components/SubtitleRow";
 import { Timeline } from "#/components/Timeline";
 import { Toolbar } from "#/components/Toolbar";
 import { VideoStage } from "#/components/VideoStage";
@@ -163,17 +163,28 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
 
         <div className="flex flex-col gap-3">
           <SettingsPanel settings={settings} onChange={update} />
-          <SubtitleList
-            lines={lines}
-            videoLoaded={playback.videoUrl != null}
-            activeId={activeLine?.id ?? null}
-            onPlayRange={playback.playRange}
-            onJumpTo={playback.seekTo}
-            onUpdateText={subs.updateText}
-            onSetManualEnd={subs.setManualEnd}
-            onNudge={subs.nudgeStart}
-            onDelete={subs.remove}
-          />
+          {lines.length === 0 ? (
+            <p className="py-6 text-center text-sm text-neutral-500">
+              No subtitles yet — pause the video and type the first line.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {lines.map((line) => (
+                <SubtitleRow
+                  key={line.id}
+                  line={line}
+                  videoLoaded={playback.videoUrl != null}
+                  active={line.id === (activeLine?.id ?? null)}
+                  onPlayRange={playback.playRange}
+                  onJumpTo={playback.seekTo}
+                  onUpdateText={subs.updateText}
+                  onSetManualEnd={subs.setManualEnd}
+                  onNudge={subs.nudgeStart}
+                  onDelete={subs.remove}
+                />
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

@@ -29,7 +29,7 @@ interface UseProjectSubtitlesArgs {
 /**
  * Per-project subtitle ops, derived from the single `useProjects()` instance
  * (this hook does not call it itself — the route calls it once). Keeps the
- * components' existing `SubtitlesApi` surface so SubtitleList/Row are untouched.
+ * row component's existing `SubtitlesApi` surface so SubtitleRow is untouched.
  */
 export function useProjectSubtitles({
   projects,
