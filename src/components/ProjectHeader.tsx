@@ -89,11 +89,6 @@ export function ProjectHeader() {
           {project.name}
         </button>
       )}
-      {project.videoName && (
-        <span className="min-w-0 truncate text-sm text-neutral-500">
-          {project.videoName}
-        </span>
-      )}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <ExportMenu />
         <Popover

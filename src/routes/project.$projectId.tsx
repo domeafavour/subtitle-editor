@@ -10,7 +10,7 @@ import { VideoStage } from "#/components/VideoStage";
 import { EditorProvider, usePlayback } from "#/hooks/editorContext";
 import { useActiveLine } from "#/hooks/useActiveLine";
 import { useGlobalShortcuts } from "#/hooks/useGlobalShortcuts";
-import { useLines } from "#/hooks/useProjectData";
+import { useLines, useProject } from "#/hooks/useProjectData";
 import { lineAtPosition, previousLineStartMs } from "#/lib/timing";
 import { projectsStore } from "#/store/projectsStore";
 
@@ -98,27 +98,37 @@ function EditorShell() {
     jumpToStart,
     jumpToEnd,
   });
+  const project = useProject();
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-4 p-6">
+    <div className="mx-auto flex max-w-7xl flex-col">
       {/* Sticky header: pinned on every screen size; the opaque background
           covers the list scrolling beneath it. */}
-      <div className="sticky top-0 z-30 -mx-6 bg-[#0a0a0a] px-6 py-3">
+      <div className="sticky top-0 z-30 bg-[#0a0a0a] px-6 py-3">
         <ProjectHeader />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px] px-6">
         {/* Video + timeline stay pinned on wide screens while the list
             scrolls; on narrow screens they scroll with the page. */}
-        <div className="flex flex-col gap-3 lg:sticky lg:top-20 lg:self-start">
-          <VideoStage />
-          <Timeline />
+        <div className="lg:sticky lg:top-14 lg:self-start">
+          <div className="h-12 inline-flex items-center">
+            {project?.videoName && (
+              <span className="min-w-0 truncate text-base text-neutral-500">
+                {project.videoName}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <VideoStage />
+            <Timeline />
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col max-lg:gap-3">
           {/* Pinned alongside the sticky video column on wide screens; the
               opaque background covers the list scrolling beneath it. */}
-          <div className="flex items-center justify-between lg:sticky lg:top-20 lg:z-10 lg:bg-[#0a0a0a] lg:py-2">
+          <div className="flex items-center justify-between lg:sticky lg:top-14 lg:z-10 lg:bg-[#0a0a0a] lg:py-2">
             <h2 className="text-sm font-semibold text-neutral-300">
               Subtitles
             </h2>
