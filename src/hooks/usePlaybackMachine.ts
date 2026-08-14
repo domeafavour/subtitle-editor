@@ -8,6 +8,7 @@ import { readStoredHandle, storeHandle } from "#/lib/videoHandleStore";
 import { playbackMachine } from "#/store/playbackMachine";
 import { projectsStore } from "#/store/projectsStore";
 import { settingsStore } from "#/store/settingsStore";
+import { speechMeasureStore } from "#/store/speechMeasureStore";
 
 export interface PlaybackApi {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -77,17 +78,21 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
               updater: (prev) => addSubtitle(prev, startMs, event.text, id),
             });
             // Speech mode: measure the new line's spoken duration (silently)
-            // and store it; the derived end reflows when it lands.
+            // and store it; the derived end reflows when it lands. The line
+            // shows a measuring spinner until the promise settles.
             if (
               settingsStore.getSnapshot().context.settings.endMode === "speech"
             ) {
-              void measureSpeechDuration(event.text).then((ms) => {
-                if (ms == null) return;
-                projectsStore.trigger.updateSubtitles({
-                  id: projectId,
-                  updater: (prev) => setSpeechDurationMs(prev, id, ms),
+              speechMeasureStore.trigger.start({ id });
+              void measureSpeechDuration(event.text)
+                .finally(() => speechMeasureStore.trigger.end({ id }))
+                .then((ms) => {
+                  if (ms == null) return;
+                  projectsStore.trigger.updateSubtitles({
+                    id: projectId,
+                    updater: (prev) => setSpeechDurationMs(prev, id, ms),
+                  });
                 });
-              });
             }
           },
         },

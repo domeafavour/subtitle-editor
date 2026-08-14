@@ -12,6 +12,7 @@ import { sortedWithEnds } from "#/lib/timing";
 import type { Project, SubtitleWithEnd } from "#/lib/types";
 import { projectsStore } from "#/store/projectsStore";
 import { settingsStore } from "#/store/settingsStore";
+import { speechMeasureStore } from "#/store/speechMeasureStore";
 
 import { useProjectId } from "./editorContext";
 
@@ -65,15 +66,19 @@ export function useSubtitleActions() {
         id: projectId,
         updater: (prev) => updateSubtitleText(prev, id, text),
       });
-      // Speech mode: re-measure the edited text's spoken duration.
+      // Speech mode: re-measure the edited text's spoken duration. The line
+      // shows a measuring spinner until the promise settles.
       if (endMode === "speech") {
-        void measureSpeechDuration(text).then((ms) => {
-          if (ms == null) return;
-          projectsStore.trigger.updateSubtitles({
-            id: projectId,
-            updater: (prev) => setSpeechDurationMs(prev, id, ms),
+        speechMeasureStore.trigger.start({ id });
+        void measureSpeechDuration(text)
+          .finally(() => speechMeasureStore.trigger.end({ id }))
+          .then((ms) => {
+            if (ms == null) return;
+            projectsStore.trigger.updateSubtitles({
+              id: projectId,
+              updater: (prev) => setSpeechDurationMs(prev, id, ms),
+            });
           });
-        });
       }
     },
     [endMode, projectId],
