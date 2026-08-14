@@ -37,8 +37,19 @@ export function SubtitleInput() {
     // accidental click would silently lose it; Enter/Esc are the only exits.
     <div className="animate-composer-in fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
       <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-3 shadow-xl">
-        <div className="mb-1 font-mono text-xs text-neutral-400">
-          New line at {formatTimestamp(draft.startMs)}
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="font-mono text-xs text-neutral-400">
+            New line at {formatTimestamp(draft.startMs)}
+          </div>
+          <button
+            type="button"
+            onClick={playback.cancelDraft}
+            title="Cancel (Esc)"
+            aria-label="Cancel subtitle"
+            className="shrink-0 rounded px-1.5 py-0.5 text-xs text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+          >
+            ✕
+          </button>
         </div>
         <textarea
           ref={ref}
@@ -48,7 +59,7 @@ export function SubtitleInput() {
           className="w-full resize-none rounded border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-blue-500"
         />
         <div className="mt-1 text-xs text-neutral-500">
-          Enter to commit · Shift+Enter for a new line · Esc to cancel
+          Enter to commit · Shift+Enter for a new line · Esc or ✕ to cancel
         </div>
       </div>
     </div>
