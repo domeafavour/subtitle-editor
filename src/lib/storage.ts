@@ -1,4 +1,5 @@
-import type { Project, Settings, Subtitle } from "./types";
+import type { Project, Settings, Speaker, Subtitle } from "./types";
+import { SPEAKERS } from "./types";
 
 /** Versioned localStorage keys — bump the version to migrate a schema. */
 export const STORAGE_KEYS = {
@@ -27,7 +28,10 @@ export function parseSubtitles(raw: unknown): Subtitle[] {
   const result: Subtitle[] = [];
   for (const item of raw) {
     if (typeof item !== "object" || item === null) continue;
-    const { id, startMs, text, manualEndMs } = item as Record<string, unknown>;
+    const { id, startMs, text, manualEndMs, speaker } = item as Record<
+      string,
+      unknown
+    >;
     if (typeof id !== "string" || id.length === 0) continue;
     if (
       typeof startMs !== "number" ||
@@ -44,9 +48,18 @@ export function parseSubtitles(raw: unknown): Subtitle[] {
       const rounded = Math.round(manualEndMs);
       if (rounded > clean.startMs) clean.manualEndMs = rounded;
     }
+    // Keep the speaker only when it is one of the known labels; anything else
+    // (wrong case, unknown value, non-string) is dropped → unassigned.
+    if (isSpeaker(speaker)) clean.speaker = speaker;
     result.push(clean);
   }
   return result;
+}
+
+function isSpeaker(value: unknown): value is Speaker {
+  return (
+    typeof value === "string" && (SPEAKERS as readonly string[]).includes(value)
+  );
 }
 
 /**

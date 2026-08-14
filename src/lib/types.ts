@@ -9,6 +9,11 @@
  * settings, and the next line's start, unless the line carries a `manualEndMs`
  * override. See timing.ts.
  */
+
+/** The fixed speaker labels a line can carry. */
+export const SPEAKERS = ["A", "B", "C"] as const;
+export type Speaker = (typeof SPEAKERS)[number];
+
 export interface Subtitle {
   /** Stable identity, generated with `crypto.randomUUID()`. */
   id: string;
@@ -24,6 +29,12 @@ export interface Subtitle {
    * Persisted in the same localStorage key.
    */
   manualEndMs?: number;
+  /**
+   * Optional speaker label (`"A"` | `"B"` | `"C"`). Absent → unassigned.
+   * Assigned by the per-line speaker button, which cycles through the labels.
+   * Persisted in the same localStorage key.
+   */
+  speaker?: Speaker;
 }
 
 export interface SubtitleWithEnd extends Subtitle {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   addSubtitle,
+  cycleSubtitleSpeaker,
   nudgeSubtitleStart,
   removeSubtitle,
   setSubtitleManualEnd,
@@ -82,6 +83,45 @@ describe("nudgeSubtitleStart", () => {
     const result = nudgeSubtitleStart([withOverride], "a", 200);
     expect(result[0]?.startMs).toBe(1200);
     expect(result[0]?.manualEndMs).toBeUndefined();
+  });
+});
+
+describe("cycleSubtitleSpeaker", () => {
+  it("assigns A to an unassigned line", () => {
+    const result = cycleSubtitleSpeaker([sub("a")], "a");
+    expect(result[0]?.speaker).toBe("A");
+  });
+
+  it("advances through the labels", () => {
+    const withSpeaker: Subtitle = {
+      id: "a",
+      startMs: 0,
+      text: "Hi",
+      speaker: "A",
+    };
+    expect(cycleSubtitleSpeaker([withSpeaker], "a")[0]?.speaker).toBe("B");
+    expect(
+      cycleSubtitleSpeaker([{ ...withSpeaker, speaker: "B" }], "a")[0]?.speaker,
+    ).toBe("C");
+  });
+
+  it("clears the speaker after C", () => {
+    const withC: Subtitle = { id: "a", startMs: 0, text: "Hi", speaker: "C" };
+    const result = cycleSubtitleSpeaker([withC], "a");
+    expect(result[0]?.speaker).toBeUndefined();
+  });
+
+  it("leaves an unknown id's array content untouched", () => {
+    const list = [sub("a")];
+    const result = cycleSubtitleSpeaker(list, "missing");
+    expect(result).toHaveLength(1);
+    expect(result[0]).toBe(list[0]);
+  });
+
+  it("leaves other lines untouched", () => {
+    const list = [sub("a"), { ...sub("b"), speaker: "B" as const }];
+    const result = cycleSubtitleSpeaker(list, "a");
+    expect(result[1]?.speaker).toBe("B");
   });
 });
 
