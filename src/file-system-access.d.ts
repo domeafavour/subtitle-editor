@@ -21,6 +21,13 @@ interface Window {
   ): Promise<FileSystemFileHandle[]>;
 }
 
+/** Drag-and-drop handle retrieval (Chromium-only, like the picker). */
+interface DataTransferItem {
+  getAsFileSystemHandle(): Promise<
+    FileSystemFileHandle | FileSystemDirectoryHandle | null
+  >;
+}
+
 interface FileSystemHandlePermissionDescriptor {
   mode?: "read" | "readwrite";
 }
