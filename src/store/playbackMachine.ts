@@ -27,6 +27,8 @@ type PlaybackEvent =
   | { type: "reconnectCancel" }
   | { type: "play" }
   | { type: "paused"; startMs: number }
+  /** Open the draft composer manually at an arbitrary playhead position. */
+  | { type: "openDraft"; startMs: number }
   | { type: "rangePlay"; startMs: number; endMs: number }
   | { type: "rangeEnd" }
   | { type: "ended" }
@@ -37,8 +39,10 @@ type PlaybackEvent =
 /**
  * The video/draft lifecycle as a state machine.
  *
- * Draft rule (the reason this is a machine): a draft opens only on the
- * `ready.playing → ready.paused` transition driven by the DOM `paused` event.
+ * Draft rule (the reason this is a machine): a draft opens on the
+ * `ready.playing → ready.paused` transition driven by the DOM `paused` event,
+ * or manually via `openDraft` from the "Add line" button (the hook pauses the
+ * DOM video, so the pause that follows re-anchors the draft to the same spot).
  * Programmatic pauses (`rangeEnd`, `ended`) transition to `paused` first, so
  * the DOM pause that follows lands on an already-paused state and is ignored —
  * no `suppressDraftRef` needed. `commitDraft` is a provided action (see
@@ -178,6 +182,7 @@ export const playbackMachine = setup({
               actions: [{ type: "commitDraft" }, assign({ draft: null })],
             },
             cancelDraft: { actions: [{ type: "clearDraft" }] },
+            openDraft: { actions: [{ type: "openDraft" }] },
             fileLoaded: { target: "paused", actions: [{ type: "loadVideo" }] },
             handleLoaded: {
               target: "paused",
@@ -191,6 +196,7 @@ export const playbackMachine = setup({
               target: "paused",
               actions: [{ type: "openDraft" }],
             },
+            openDraft: { actions: [{ type: "openDraft" }] },
             rangePlay: { actions: [{ type: "setActiveRange" }] },
             rangeEnd: {
               target: "paused",
