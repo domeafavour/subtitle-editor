@@ -116,7 +116,9 @@ function EditorShell() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
+          {/* Pinned alongside the sticky video column on wide screens; the
+              opaque background covers the list scrolling beneath it. */}
+          <div className="flex items-center justify-between lg:sticky lg:top-20 lg:z-10 lg:bg-[#0a0a0a] lg:py-2">
             <h2 className="text-sm font-semibold text-neutral-300">
               Subtitles
             </h2>
