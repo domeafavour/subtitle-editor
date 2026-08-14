@@ -35,7 +35,7 @@ export function SubtitleInput() {
     // draft never shifts the page layout. Deliberately not dismissible by
     // outside click — typed text lives only in this textarea and an
     // accidental click would silently lose it; Enter/Esc are the only exits.
-    <div className="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
+    <div className="animate-composer-in fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
       <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-3 shadow-xl">
         <div className="mb-1 font-mono text-xs text-neutral-400">
           New line at {formatTimestamp(draft.startMs)}

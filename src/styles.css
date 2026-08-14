@@ -20,3 +20,23 @@ body {
   color-scheme: dark;
 }
 
+/* Entrance for the floating draft composer (fade + small rise) as a real
+   Tailwind theme animation, so the IDE suggests `animate-composer-in`. The
+   wrapper is centered with Tailwind's translate utilities (the `translate`
+   property), so the keyframe animates `translate` too — animating `transform`
+   would double the horizontal offset. */
+@theme {
+  --animate-composer-in: composer-in 150ms ease-out;
+
+  @keyframes composer-in {
+    from {
+      opacity: 0;
+      translate: -50% 8px;
+    }
+    to {
+      opacity: 1;
+      translate: -50% 0;
+    }
+  }
+}
+
