@@ -159,7 +159,10 @@ The local video file played through an in-memory object URL. A reference to the
 picked file (a File System Access API handle) is persisted in IndexedDB keyed
 by the project id, so a reload can re-open that project's video; a one-click
 reconnect may be needed to re-grant access after a reload. Drag-dropped files
-and browsers without that API fall back to re-picking.
+resolve a handle too (via `DataTransferItem.getAsFileSystemHandle`), so they
+restore like picked ones; a drop that can't yield a handle (browser without
+the API, or a non-OS file) falls back to a session-only `File`, matching the
+picker fallback. Browsers without the API fall back to re-picking.
 _Avoid_: upload, asset
 
 **Export**:
