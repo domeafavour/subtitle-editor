@@ -35,6 +35,13 @@ const VIDEO_ACCEPT: FilePickerAcceptType[] = [
  * Drag-and-drop / click surface shown when no video is loaded. Clicking
  * browses via the File System Access API when available (persists the handle);
  * otherwise it falls back to a plain file input.
+ *
+ * Drops are handle-backed: the dropped file's `FileSystemFileHandle` is
+ * retrieved via `DataTransferItem.getAsFileSystemHandle()`, so a dragged
+ * video persists and restores after a reload like a picked one. When no
+ * handle can be obtained (browser without the API, or a file that can't
+ * expose one), the drop falls back to a session-only `File` — usable until
+ * the page reloads, matching the picker fallback.
  */
 export function DropZone({
   onFile,
@@ -70,7 +77,16 @@ export function DropZone({
   const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
     event.preventDefault();
     setDragging(false);
-    pickFile(event.dataTransfer.files[0]);
+    void (async () => {
+      const handle = await firstFileHandle(event.dataTransfer);
+      if (handle) {
+        onFileHandle(handle); // persists → restorable after reload
+      } else {
+        // No handle obtainable (browser without the API, or a file that
+        // can't expose one): fall back to a session-only File.
+        pickFile(event.dataTransfer.files[0]);
+      }
+    })();
   };
 
   return (
@@ -103,4 +119,20 @@ export function DropZone({
       />
     </div>
   );
+}
+
+/** The first file handle in a drop, or null when none can be obtained. */
+async function firstFileHandle(
+  dataTransfer: DataTransfer,
+): Promise<FileSystemFileHandle | null> {
+  for (const item of dataTransfer.items) {
+    if (item.kind !== "file") continue;
+    try {
+      const handle = await item.getAsFileSystemHandle();
+      if (handle && handle.kind === "file") return handle;
+    } catch {
+      // The browser couldn't expose the handle — treat as no drop.
+    }
+  }
+  return null;
 }
