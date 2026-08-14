@@ -101,43 +101,58 @@ function EditorShell() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-4 p-6">
-      <ProjectHeader />
-
-      <VideoStage />
-      <Timeline />
-
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-neutral-300">Subtitles</h2>
-        <button
-          type="button"
-          onClick={() => playback.openDraftAtCurrentTime()}
-          disabled={playback.videoUrl == null}
-          title={
-            playback.videoUrl == null
-              ? "Load the video first"
-              : "New line at the current playhead"
-          }
-          className="rounded bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          + Add line
-        </button>
+      {/* Sticky header: pinned on every screen size; the opaque background
+          covers the list scrolling beneath it. */}
+      <div className="sticky top-0 z-30 -mx-6 bg-[#0a0a0a] px-6 py-3">
+        <ProjectHeader />
       </div>
-      {lines.length === 0 ? (
-        <p className="py-6 text-center text-sm text-neutral-500">
-          No subtitles yet — pause the video and type the first line, or use “+
-          Add line”.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {lines.map((line) => (
-            <SubtitleRow
-              key={line.id}
-              line={line}
-              active={line.id === (activeLine?.id ?? null)}
-            />
-          ))}
-        </ul>
-      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
+        {/* Video + timeline stay pinned on wide screens while the list
+            scrolls; on narrow screens they scroll with the page. */}
+        <div className="flex flex-col gap-3 lg:sticky lg:top-20 lg:self-start">
+          <VideoStage />
+          <Timeline />
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-neutral-300">
+              Subtitles
+            </h2>
+            <button
+              type="button"
+              onClick={() => playback.openDraftAtCurrentTime()}
+              disabled={playback.videoUrl == null}
+              title={
+                playback.videoUrl == null
+                  ? "Load the video first"
+                  : "New line at the current playhead"
+              }
+              className="rounded bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              + Add line
+            </button>
+          </div>
+          {lines.length === 0 ? (
+            <p className="py-6 text-center text-sm text-neutral-500">
+              No subtitles yet — pause the video and type the first line, or use
+              “+ Add line”.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {lines.map((line) => (
+                <SubtitleRow
+                  key={line.id}
+                  line={line}
+                  active={line.id === (activeLine?.id ?? null)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
       {/* Floating draft composer — fixed to the viewport, never in flow. */}
       <SubtitleInput />
     </div>
