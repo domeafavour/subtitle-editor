@@ -22,8 +22,6 @@ interface SubtitleRowProps {
   /** Set a manual end override (ms) or clear it (null → automatic). */
   onSetManualEnd: (id: string, endMs: number | null) => void;
   onNudge: (id: string, deltaMs: number) => void;
-  /** Advance the line's speaker label one step (`none → A → B → C → none`). */
-  onCycleSpeaker: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
@@ -41,7 +39,6 @@ export function SubtitleRow({
   onUpdateText,
   onSetManualEnd,
   onNudge,
-  onCycleSpeaker,
   onDelete,
 }: SubtitleRowProps) {
   const [editingText, setEditingText] = useState(false);
@@ -191,27 +188,12 @@ export function SubtitleRow({
       <div className="flex shrink-0 gap-1 pt-1">
         <button
           type="button"
-          onClick={() => {
-            onCycleSpeaker(line.id);
-            speakText(line.text);
-          }}
-          title={
-            line.speaker == null
-              ? "Speaker: none — click to set A and hear the line"
-              : `Speaker: ${line.speaker} — click to advance and hear the line`
-          }
-          aria-label={
-            line.speaker == null
-              ? "Assign speaker A and hear the line"
-              : `Speaker ${line.speaker}, click to advance and hear the line`
-          }
-          className={`rounded px-1.5 py-0.5 text-xs font-semibold hover:bg-neutral-800 ${
-            line.speaker == null
-              ? "text-neutral-500 hover:text-neutral-100"
-              : "text-blue-300"
-          }`}
+          onClick={() => speakText(line.text)}
+          title="Read line aloud"
+          aria-label="Read line aloud"
+          className="rounded px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-800 hover:text-neutral-100"
         >
-          {line.speaker ?? "☺"}
+          🔊
         </button>
         {!editingText && !editingEnd && (
           <button
