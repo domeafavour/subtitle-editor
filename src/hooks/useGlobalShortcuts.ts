@@ -10,12 +10,14 @@ interface GlobalShortcuts {
   stepBackward: () => void;
   /** Step the playhead forward by one frame, paused. */
   stepForward: () => void;
+  /** Open the draft composer at the current playhead (the Add line button). */
+  addLine: () => void;
 }
 
 /**
  * Global editor shortcuts: Space toggles play/pause, `[` jumps to the current
- * line's start, `]` to its end, and ← / → step by one frame (all ending
- * paused).
+ * line's start, `]` to its end, ← / → step by one frame (all ending paused),
+ * and `n` opens the draft composer at the playhead.
  *
  * All bindings are skipped when the keydown target is editable (input,
  * textarea, contentEditable) so the user can type those keys literally.
@@ -26,6 +28,7 @@ export function useGlobalShortcuts({
   jumpToEnd,
   stepBackward,
   stepForward,
+  addLine,
 }: GlobalShortcuts): void {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -54,12 +57,26 @@ export function useGlobalShortcuts({
           event.preventDefault();
           stepForward();
           break;
+        case "KeyN":
+          // Plain `n` only — Ctrl/Cmd+N (browser "new window") and other
+          // modifier combos must not add a line.
+          if (event.ctrlKey || event.metaKey || event.altKey) break;
+          event.preventDefault();
+          addLine();
+          break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [togglePlayPause, jumpToStart, jumpToEnd, stepBackward, stepForward]);
+  }, [
+    togglePlayPause,
+    jumpToStart,
+    jumpToEnd,
+    stepBackward,
+    stepForward,
+    addLine,
+  ]);
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
