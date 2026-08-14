@@ -67,11 +67,18 @@ per second, minimum seconds, and maximum seconds.
 _Avoid_: timing config, reading params
 
 **Draft**:
-The in-progress line opened when the video pauses — or manually via the Add
-line button / `n` shortcut, which captures the current playhead and pauses if
-playing — before it is committed.
+The in-progress line opened when the video pauses (if the pause-draft setting
+is on) — or manually via the Add line button / `n` shortcut, which captures the
+current playhead and pauses if playing — before it is committed.
 A draft has a start time (the pause or capture moment) and no text until typed.
 _Avoid_: pending subtitle, new line
+
+**Pause draft**:
+The setting controlling whether pausing the video opens the draft composer.
+Default on; when off, pausing just pauses and lines are added manually
+(+ Add line / `n`). Programmatic pauses (range end, natural end) never open a
+draft regardless.
+_Avoid_: auto-draft, capture on pause
 
 **Commit**:
 The act of promoting a draft into a Subtitle. Rejects empty text.
