@@ -108,6 +108,7 @@ describe("parseSettings", () => {
       minDurationSec: 2,
       maxDurationSec: 8,
       endMode: "speech",
+      openDraftOnPause: true,
     });
   });
 });

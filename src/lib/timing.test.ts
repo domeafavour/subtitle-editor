@@ -15,6 +15,7 @@ const settings: Settings = {
   minDurationSec: 1,
   maxDurationSec: 7,
   endMode: "reading",
+  openDraftOnPause: true,
 };
 
 function sub(id: string, startMs: number, text: string): Subtitle {
@@ -49,6 +50,7 @@ describe("baseDurationMs", () => {
       minDurationSec: 7,
       maxDurationSec: 1,
       endMode: "reading",
+      openDraftOnPause: true,
     };
     expect(baseDurationMs("a".repeat(30), swapped)).toBe(2000);
   });
@@ -59,6 +61,7 @@ describe("baseDurationMs", () => {
       minDurationSec: 1,
       maxDurationSec: 7,
       endMode: "reading",
+      openDraftOnPause: true,
     };
     expect(baseDurationMs("hello", broken)).toBe(7000);
   });

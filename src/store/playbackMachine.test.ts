@@ -83,6 +83,15 @@ describe("playbackMachine — the draft rule", () => {
     expect(actor.getSnapshot().context.draft).toBeNull();
   });
 
+  it("lands on paused without a draft for pausedNoDraft (setting off)", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "play" });
+    actor.send({ type: "pausedNoDraft", startMs: 2_500 });
+    expect(actor.getSnapshot().matches({ ready: "paused" })).toBe(true);
+    expect(actor.getSnapshot().context.draft).toBeNull();
+  });
+
   it("does not open a draft on natural end", () => {
     const actor = newActor();
     load(actor);
