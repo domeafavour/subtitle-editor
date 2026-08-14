@@ -87,6 +87,12 @@ line's start (like vim `b`); `]` seeks to the current line's end (like vim `e`).
 The per-row `⟪` / `⟫` buttons jump to that line's own start / end.
 _Avoid_: seek, scrub-to-line
 
+**Frame step**:
+Moving the paused playhead by one frame (~33 ms, one 30 fps frame) with `←` /
+`→`, without starting playback. Unlike a jump it does not move to a line
+boundary.
+_Avoid_: nudge-playhead, micro-seek
+
 **Active line**:
 The subtitle line whose time range contains the video's current time —
 `startMs <= currentTime < endMs`. When the playhead sits in a gap between lines,
