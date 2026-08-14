@@ -57,6 +57,11 @@ export interface Settings {
    * (`"reading"`) or the line's measured speech duration (`"speech"`).
    */
   endMode: "reading" | "speech";
+  /**
+   * Whether pausing the video opens the draft composer. Off → pausing just
+   * pauses; lines are added manually (+ Add line / `n`).
+   */
+  openDraftOnPause: boolean;
 }
 
 /** An in-progress line captured at a pause point, not yet committed. */

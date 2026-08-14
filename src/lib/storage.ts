@@ -16,6 +16,8 @@ export function defaultSettings(): Settings {
     maxDurationSec: 7,
     // Reading-speed derivation stays the default; speech mode is opt-in.
     endMode: "reading",
+    // Pausing opens the draft by default; off means manual adds only.
+    openDraftOnPause: true,
   };
 }
 
@@ -104,14 +106,21 @@ export function parseProjects(raw: unknown): Project[] {
 export function parseSettings(raw: unknown): Settings {
   const fallback = defaultSettings();
   if (typeof raw !== "object" || raw === null) return fallback;
-  const { charsPerSec, minDurationSec, maxDurationSec, endMode } =
-    raw as Record<string, unknown>;
+  const {
+    charsPerSec,
+    minDurationSec,
+    maxDurationSec,
+    endMode,
+    openDraftOnPause,
+  } = raw as Record<string, unknown>;
   return {
     charsPerSec: finiteNumber(charsPerSec) ?? fallback.charsPerSec,
     minDurationSec: finiteNumber(minDurationSec) ?? fallback.minDurationSec,
     maxDurationSec: finiteNumber(maxDurationSec) ?? fallback.maxDurationSec,
     // Any value other than the literal "speech" falls back to "reading".
     endMode: endMode === "speech" ? "speech" : "reading",
+    // Only a literal `false` disables the pause draft; anything else is on.
+    openDraftOnPause: openDraftOnPause !== false,
   };
 }
 
