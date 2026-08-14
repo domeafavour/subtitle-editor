@@ -23,7 +23,8 @@ file handles).
 - **Capturing lines** — pause the video and type, or add a line at the current
   playhead anytime with the **+ Add line** button / `n` shortcut (the video
   pauses if playing). The floating composer commits with Enter (Shift+Enter
-  for a new line) and cancels with Esc or ✕.
+  for a new line) and cancels with Esc or ✕. A setting controls whether
+  pausing opens the draft — turn it off to pause freely and add lines manually.
 - **Per-line controls** — play the line's range, jump to its start/end, edit
   text, set or reset a manual end time, nudge by ±0.1s, read the line aloud
   via the browser TTS, and delete.
