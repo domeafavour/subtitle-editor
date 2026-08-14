@@ -1,31 +1,23 @@
-import type { RefObject } from "react";
 import { useEffect, useMemo, useState } from "react";
 
+import { usePlayback } from "#/hooks/editorContext";
+import { useLines } from "#/hooks/useProjectData";
 import { formatTimestamp } from "#/lib/format";
 import { blockGeometry, playheadPercent } from "#/lib/timeline";
-import type { SubtitleWithEnd } from "#/lib/types";
-
-interface TimelineProps {
-  lines: SubtitleWithEnd[];
-  /** Scale in integer ms — the video duration, or the last line's end. */
-  durationMs: number;
-  isPlaying: boolean;
-  videoRef: RefObject<HTMLVideoElement | null>;
-  onPlayRange: (startMs: number, endMs: number) => void;
-}
 
 /**
  * Horizontal track showing each line's `[start, end)` as a block, scaled
- * against `durationMs`. Clicking a block plays that line's range; a red
- * playhead tracks the video's current time while it plays.
+ * against the video duration (or the last line's end). Clicking a block plays
+ * that line's range; a red playhead tracks the video's current time while it
+ * plays. Reads the playback machine and the subtitle list from context —
+ * no props.
  */
-export function Timeline({
-  lines,
-  durationMs,
-  isPlaying,
-  videoRef,
-  onPlayRange,
-}: TimelineProps) {
+export function Timeline() {
+  const playback = usePlayback();
+  const lines = useLines();
+  // Scale: the real video duration when loaded, else the last line's end.
+  const durationMs =
+    playback.videoDuration ?? lines[lines.length - 1]?.endMs ?? 0;
   const [playheadMs, setPlayheadMs] = useState(0);
 
   const geometries = useMemo(
@@ -37,34 +29,36 @@ export function Timeline({
   // Snap the playhead on pause / scale change.
   // biome-ignore lint/correctness/useExhaustiveDependencies: isPlaying and durationMs are intentional triggers, not read in the body.
   useEffect(() => {
-    const video = videoRef.current;
+    const video = playback.videoRef.current;
     setPlayheadMs(video ? Math.round(video.currentTime * 1000) : 0);
-  }, [isPlaying, durationMs, videoRef]);
+  }, [playback.isPlaying, durationMs, playback.videoRef]);
 
   // Move the playhead while playing (60 Hz, re-renders only this small track).
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!playback.isPlaying) return;
     let frame = 0;
     const tick = () => {
-      const video = videoRef.current;
+      const video = playback.videoRef.current;
       if (video) setPlayheadMs(video.currentTime * 1000);
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [isPlaying, videoRef]);
+  }, [playback.isPlaying, playback.videoRef]);
 
   // Reflect paused seeks (e.g. the `[`/`]` jumps or dragging the native
   // progress bar) on the playhead — `timeupdate` fires on seek while paused.
   useEffect(() => {
-    const video = videoRef.current;
+    const video = playback.videoRef.current;
     if (!video || durationMs <= 0) return;
     const onTimeUpdate = () => {
-      if (!isPlaying) setPlayheadMs(Math.round(video.currentTime * 1000));
+      if (!playback.isPlaying) {
+        setPlayheadMs(Math.round(video.currentTime * 1000));
+      }
     };
     video.addEventListener("timeupdate", onTimeUpdate);
     return () => video.removeEventListener("timeupdate", onTimeUpdate);
-  }, [isPlaying, durationMs, videoRef]);
+  }, [playback.isPlaying, durationMs, playback.videoRef]);
 
   return (
     <div className="relative h-10 w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
@@ -76,7 +70,7 @@ export function Timeline({
             <button
               key={line.id}
               type="button"
-              onClick={() => onPlayRange(line.startMs, line.endMs)}
+              onClick={() => playback.playRange(line.startMs, line.endMs)}
               title={label}
               aria-label={label}
               style={{

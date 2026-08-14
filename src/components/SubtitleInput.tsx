@@ -1,43 +1,39 @@
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef } from "react";
 
+import { usePlayback } from "#/hooks/editorContext";
 import { formatTimestamp } from "#/lib/format";
 
-interface SubtitleInputProps {
-  draftStartMs: number;
-  onCommit: (text: string) => void;
-  onCancel: () => void;
-}
-
 /**
- * Draft composer shown while the video is paused. Enter commits (Shift+Enter
- * inserts a newline), ESC cancels. Auto-focuses on mount.
+ * Draft composer shown while a draft is open (paused or via + Add line).
+ * Enter commits (Shift+Enter inserts a newline), ESC cancels. Reads the draft
+ * from the playback machine context — no props; renders nothing without one.
  */
-export function SubtitleInput({
-  draftStartMs,
-  onCommit,
-  onCancel,
-}: SubtitleInputProps) {
+export function SubtitleInput() {
+  const playback = usePlayback();
   const ref = useRef<HTMLTextAreaElement | null>(null);
+  const draft = playback.draft;
 
   useEffect(() => {
-    ref.current?.focus();
-  }, []);
+    if (draft) ref.current?.focus();
+  }, [draft]);
+
+  if (!draft) return null;
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      onCommit(ref.current?.value ?? "");
+      playback.commitDraft(ref.current?.value ?? "");
     } else if (event.key === "Escape") {
       event.preventDefault();
-      onCancel();
+      playback.cancelDraft();
     }
   };
 
   return (
     <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-3">
       <div className="mb-1 font-mono text-xs text-neutral-400">
-        New line at {formatTimestamp(draftStartMs)}
+        New line at {formatTimestamp(draft.startMs)}
       </div>
       <textarea
         ref={ref}

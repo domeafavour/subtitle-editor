@@ -1,6 +1,8 @@
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
+import { usePlayback } from "#/hooks/editorContext";
+import { useSubtitleActions } from "#/hooks/useProjectData";
 import {
   formatEndSeconds,
   formatTimestamp,
@@ -10,37 +12,23 @@ import { speakText } from "#/lib/speech";
 import type { SubtitleWithEnd } from "#/lib/types";
 
 interface SubtitleRowProps {
+  /** The line this row renders — the one genuinely per-row value. */
   line: SubtitleWithEnd;
-  /** False when no video is loaded — the play action is a no-op then. */
-  videoLoaded: boolean;
   /** True when this line contains the video's current time. */
   active: boolean;
-  onPlayRange: (startMs: number, endMs: number) => void;
-  /** Seek to an absolute time (line start/end) without playing. */
-  onJumpTo: (ms: number) => void;
-  onUpdateText: (id: string, text: string) => void;
-  /** Set a manual end override (ms) or clear it (null → automatic). */
-  onSetManualEnd: (id: string, endMs: number | null) => void;
-  onNudge: (id: string, deltaMs: number) => void;
-  onDelete: (id: string) => void;
 }
 
 /**
  * One subtitle in the list. The body (start · text) is a button that plays the
  * line's range; the end time is a separate click-to-edit (seconds) with a
  * reset-to-automatic control when overridden. Nudge/delete stay as controls.
+ * Playback and store mutations come from context — only `line`/`active` are
+ * props.
  */
-export function SubtitleRow({
-  line,
-  videoLoaded,
-  active,
-  onPlayRange,
-  onJumpTo,
-  onUpdateText,
-  onSetManualEnd,
-  onNudge,
-  onDelete,
-}: SubtitleRowProps) {
+export function SubtitleRow({ line, active }: SubtitleRowProps) {
+  const playback = usePlayback();
+  const { updateText, setManualEnd, nudgeStart, remove } = useSubtitleActions();
+  const videoLoaded = playback.videoUrl != null;
   const [editingText, setEditingText] = useState(false);
   const [editValue, setEditValue] = useState(line.text);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -59,7 +47,7 @@ export function SubtitleRow({
 
   const saveText = () => {
     setEditingText(false);
-    if (editValue.trim().length > 0) onUpdateText(line.id, editValue);
+    if (editValue.trim().length > 0) updateText(line.id, editValue);
   };
 
   const handleTextKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -80,7 +68,7 @@ export function SubtitleRow({
 
   const saveEnd = () => {
     const ms = parseSecondsToMs(endEditValue);
-    if (ms != null && ms > line.startMs) onSetManualEnd(line.id, ms);
+    if (ms != null && ms > line.startMs) setManualEnd(line.id, ms);
     setEditingEnd(false);
   };
 
@@ -108,7 +96,7 @@ export function SubtitleRow({
         <button
           type="button"
           disabled={!videoLoaded}
-          onClick={() => onJumpTo(line.startMs)}
+          onClick={() => playback.seekTo(line.startMs)}
           title={videoLoaded ? "Jump to start" : "Load a video to jump"}
           aria-label="Jump to line start"
           className="shrink-0 self-start pt-1.5 text-xs text-neutral-400 hover:text-neutral-100 disabled:cursor-not-allowed"
@@ -130,7 +118,7 @@ export function SubtitleRow({
         <button
           type="button"
           disabled={!videoLoaded}
-          onClick={() => onPlayRange(line.startMs, line.endMs)}
+          onClick={() => playback.playRange(line.startMs, line.endMs)}
           title={
             videoLoaded
               ? `Play ${formatTimestamp(line.startMs)} → ${formatTimestamp(line.endMs)}`
@@ -175,7 +163,7 @@ export function SubtitleRow({
           {manual && (
             <button
               type="button"
-              onClick={() => onSetManualEnd(line.id, null)}
+              onClick={() => setManualEnd(line.id, null)}
               title="Reset to automatic end"
               className="rounded px-1 py-0.5 text-xs text-neutral-500 hover:bg-neutral-800 hover:text-neutral-100"
             >
@@ -211,7 +199,7 @@ export function SubtitleRow({
         <button
           type="button"
           disabled={!videoLoaded}
-          onClick={() => onJumpTo(line.endMs)}
+          onClick={() => playback.seekTo(line.endMs)}
           title={videoLoaded ? "Jump to end" : "Load a video to jump"}
           aria-label="Jump to line end"
           className="rounded px-1.5 py-0.5 text-xs text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 disabled:cursor-not-allowed"
@@ -220,7 +208,7 @@ export function SubtitleRow({
         </button>
         <button
           type="button"
-          onClick={() => onNudge(line.id, -100)}
+          onClick={() => nudgeStart(line.id, -100)}
           title="Move earlier by 0.1s"
           className="rounded px-1.5 py-0.5 text-xs text-neutral-300 hover:bg-neutral-800"
         >
@@ -228,7 +216,7 @@ export function SubtitleRow({
         </button>
         <button
           type="button"
-          onClick={() => onNudge(line.id, 100)}
+          onClick={() => nudgeStart(line.id, 100)}
           title="Move later by 0.1s"
           className="rounded px-1.5 py-0.5 text-xs text-neutral-300 hover:bg-neutral-800"
         >
@@ -236,7 +224,7 @@ export function SubtitleRow({
         </button>
         <button
           type="button"
-          onClick={() => onDelete(line.id)}
+          onClick={() => remove(line.id)}
           title="Delete subtitle"
           className="rounded px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-red-950 hover:text-red-300"
         >

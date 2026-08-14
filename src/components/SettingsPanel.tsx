@@ -1,12 +1,21 @@
-import type { Settings } from "#/lib/types";
+import { useSelector } from "@xstate/react";
 
-interface SettingsPanelProps {
-  settings: Settings;
-  onChange: (patch: Partial<Settings>) => void;
-}
+import { settingsStore } from "#/store/settingsStore";
 
-/** Reading-speed settings that drive end-time inference. */
-export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
+/**
+ * Reading-speed settings that drive end-time inference. Reads and updates the
+ * global settings store directly — no props.
+ */
+export function SettingsPanel() {
+  const settings = useSelector(
+    settingsStore,
+    (snapshot) => snapshot.context.settings,
+  );
+
+  const update = (patch: Partial<typeof settings>) => {
+    settingsStore.trigger.update({ patch });
+  };
+
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
       <h2 className="mb-2 text-sm font-semibold text-neutral-200">Timing</h2>
@@ -19,7 +28,7 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
             step={1}
             value={settings.charsPerSec}
             onChange={(event) =>
-              onChange({ charsPerSec: Number(event.target.value) })
+              update({ charsPerSec: Number(event.target.value) })
             }
             className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 outline-none focus:border-blue-500"
           />
@@ -32,7 +41,7 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
             step={0.1}
             value={settings.minDurationSec}
             onChange={(event) =>
-              onChange({ minDurationSec: Number(event.target.value) })
+              update({ minDurationSec: Number(event.target.value) })
             }
             className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 outline-none focus:border-blue-500"
           />
@@ -45,7 +54,7 @@ export function SettingsPanel({ settings, onChange }: SettingsPanelProps) {
             step={0.1}
             value={settings.maxDurationSec}
             onChange={(event) =>
-              onChange({ maxDurationSec: Number(event.target.value) })
+              update({ maxDurationSec: Number(event.target.value) })
             }
             className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 outline-none focus:border-blue-500"
           />

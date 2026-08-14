@@ -1,32 +1,34 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
-import type { Project } from "#/lib/types";
+import { useProject } from "#/hooks/useProjectData";
+import { deleteHandle } from "#/lib/videoHandleStore";
+import { projectsStore } from "#/store/projectsStore";
 
-interface ProjectHeaderProps {
-  project: Project;
-  onRename: (name: string) => void;
-  onDelete: () => void;
-}
-
-/** Editor header: back link, click-to-edit project name, video name, delete. */
-export function ProjectHeader({
-  project,
-  onRename,
-  onDelete,
-}: ProjectHeaderProps) {
+/**
+ * Editor header: back link, click-to-edit project name, video name, delete.
+ * Reads the current project from the global store and fires store triggers
+ * directly — no props.
+ */
+export function ProjectHeader() {
+  const project = useProject();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(project.name);
+  const [value, setValue] = useState(project?.name ?? "");
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
+  if (!project) return null;
+
   const commit = () => {
     setEditing(false);
-    if (value.trim().length > 0) onRename(value);
+    if (value.trim().length > 0) {
+      projectsStore.trigger.renameProject({ id: project.id, name: value });
+    }
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -37,6 +39,19 @@ export function ProjectHeader({
       event.preventDefault();
       setEditing(false);
     }
+  };
+
+  const handleDelete = () => {
+    if (
+      !window.confirm(
+        `Delete project “${project.name}”? Its subtitles and stored video reference will be removed.`,
+      )
+    ) {
+      return;
+    }
+    void deleteHandle(project.id);
+    projectsStore.trigger.deleteProject({ id: project.id });
+    navigate({ to: "/" });
   };
 
   return (
@@ -77,7 +92,7 @@ export function ProjectHeader({
       )}
       <button
         type="button"
-        onClick={onDelete}
+        onClick={handleDelete}
         className="ml-auto shrink-0 rounded bg-neutral-800 px-3 py-1.5 text-sm text-neutral-300 hover:bg-red-950 hover:text-red-300"
       >
         Delete project
