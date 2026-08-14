@@ -68,8 +68,8 @@ _Avoid_: timing config, reading params
 
 **Draft**:
 The in-progress line opened when the video pauses — or manually via the Add
-line button, which captures the current playhead and pauses if playing —
-before it is committed.
+line button / `n` shortcut, which captures the current playhead and pauses if
+playing — before it is committed.
 A draft has a start time (the pause or capture moment) and no text until typed.
 _Avoid_: pending subtitle, new line
 
