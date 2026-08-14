@@ -1,38 +1,19 @@
-import { useEffect, useState } from "react";
-
+import { useActiveLine } from "#/hooks/useActiveLine";
 import { usePlayback } from "#/hooks/editorContext";
 import { useLines } from "#/hooks/useProjectData";
 
 /**
- * Renders the active subtitle over the video while it plays.
+ * Renders the active subtitle over the video.
  *
- * A rAF loop reads `currentTime` and updates state only when the active line's
- * id changes, so the 60 Hz loop never re-renders the rest of the tree.
+ * Reuses `useActiveLine`, which tracks the video's current time — during
+ * playback and after any paused seek (native progress bar or the keyboard:
+ * ←/→, `[`/`]`, …) — so the overlay always shows the line the playhead is
+ * inside, matching the highlighted row by construction.
  */
 export function PlaybackOverlay() {
   const playback = usePlayback();
   const lines = useLines();
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!playback.isPlaying) return;
-    let frame = 0;
-    const tick = () => {
-      const video = playback.videoRef.current;
-      if (video) {
-        const tMs = Math.round(video.currentTime * 1000);
-        const active = lines.find(
-          (line) => line.startMs <= tMs && line.endMs > tMs,
-        );
-        setActiveId(active?.id ?? null);
-      }
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [playback.isPlaying, playback.videoRef, lines]);
-
-  const active = lines.find((line) => line.id === activeId) ?? null;
+  const active = useActiveLine(lines, playback.videoRef);
 
   return (
     <div className="pointer-events-none absolute inset-0 flex items-end justify-center p-4">
