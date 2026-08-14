@@ -208,9 +208,28 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
 
         <div className="flex flex-col gap-3">
           <SettingsPanel settings={settings} onChange={updateSettings} />
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-neutral-300">
+              Subtitles
+            </h2>
+            <button
+              type="button"
+              onClick={() => playback.openDraftAtCurrentTime()}
+              disabled={playback.videoUrl == null}
+              title={
+                playback.videoUrl == null
+                  ? "Load the video first"
+                  : "New line at the current playhead"
+              }
+              className="rounded bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              + Add line
+            </button>
+          </div>
           {lines.length === 0 ? (
             <p className="py-6 text-center text-sm text-neutral-500">
-              No subtitles yet — pause the video and type the first line.
+              No subtitles yet — pause the video and type the first line, or use
+              “+ Add line”.
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
