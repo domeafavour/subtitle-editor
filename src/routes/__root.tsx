@@ -1,6 +1,9 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { useEffect } from "react";
+
+import { runMigration } from "#/store/migration";
 
 import "../styles.css";
 
@@ -9,6 +12,9 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+  useEffect(() => {
+    runMigration();
+  }, []);
   return (
     <>
       <Outlet />

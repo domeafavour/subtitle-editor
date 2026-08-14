@@ -1,17 +1,45 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useSelector } from "@xstate/react";
+import { useMemo } from "react";
 
 import { DropZone } from "#/components/DropZone";
-import { useProjects } from "#/hooks/useProjects";
+import { createProjectRecord } from "#/lib/project";
 import type { Project } from "#/lib/types";
+import { deleteHandle, storeHandle } from "#/lib/videoHandleStore";
+import { projectsStore } from "#/store/projectsStore";
 
 export const Route = createFileRoute("/")({ component: ProjectList });
 
 function ProjectList() {
-  const { projects, createProject, deleteProject, isMigrating } = useProjects();
+  const projects = useSelector(
+    projectsStore,
+    (snapshot) => snapshot.context.projects,
+  );
+  const isMigrating = useSelector(
+    projectsStore,
+    (snapshot) => snapshot.context.isMigrating,
+  );
   const navigate = useNavigate();
+  const sorted = useMemo(
+    () =>
+      [...projects].sort(
+        (a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id),
+      ),
+    [projects],
+  );
 
   const openProject = (project: Project) => {
     navigate({ to: "/project/$projectId", params: { projectId: project.id } });
+  };
+
+  const createProject = async (input: {
+    videoName: string;
+    handle?: FileSystemFileHandle;
+  }) => {
+    const project = createProjectRecord({ videoName: input.videoName });
+    if (input.handle) await storeHandle(project.id, input.handle);
+    projectsStore.trigger.createProject({ project });
+    return project;
   };
 
   const handleFile = (file: File) => {
@@ -34,7 +62,8 @@ function ProjectList() {
     ) {
       return;
     }
-    deleteProject(project.id);
+    void deleteHandle(project.id);
+    projectsStore.trigger.deleteProject({ id: project.id });
   };
 
   return (
@@ -66,13 +95,13 @@ function ProjectList() {
           <p className="text-sm text-neutral-500">
             Checking for existing data…
           </p>
-        ) : projects.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <p className="text-sm text-neutral-500">
             No projects yet — pick a video above to create one.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {projects.map((project) => (
+            {sorted.map((project) => (
               <li
                 key={project.id}
                 className="flex items-center gap-3 rounded border border-neutral-800 bg-neutral-900 px-3 py-2"

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useSelector } from "@xstate/react";
 import { useCallback, useMemo } from "react";
 
 import { ProjectHeader } from "#/components/ProjectHeader";
@@ -10,15 +11,22 @@ import { Toolbar } from "#/components/Toolbar";
 import { VideoStage } from "#/components/VideoStage";
 import { useActiveLine } from "#/hooks/useActiveLine";
 import { useGlobalShortcuts } from "#/hooks/useGlobalShortcuts";
-import { usePlayback } from "#/hooks/usePlayback";
-import { useProjectSubtitles } from "#/hooks/useProjectSubtitles";
-import { useProjects } from "#/hooks/useProjects";
-import { useSettings } from "#/hooks/useSettings";
+import { usePlaybackMachine } from "#/hooks/usePlaybackMachine";
+import {
+  nudgeSubtitleStart,
+  removeSubtitle,
+  setSubtitleManualEnd,
+  updateSubtitleText,
+} from "#/lib/subtitles";
 import {
   lineAtPosition,
   previousLineStartMs,
   sortedWithEnds,
 } from "#/lib/timing";
+import type { Settings } from "#/lib/types";
+import { deleteHandle } from "#/lib/videoHandleStore";
+import { projectsStore } from "#/store/projectsStore";
+import { settingsStore } from "#/store/settingsStore";
 
 export const Route = createFileRoute("/project/$projectId")({
   component: ProjectRoute,
@@ -26,7 +34,7 @@ export const Route = createFileRoute("/project/$projectId")({
 
 function ProjectRoute() {
   const { projectId } = Route.useParams();
-  // key remount resets usePlayback's video/draft state when switching projects.
+  // key remount resets the playback machine's video/draft state when switching projects.
   return <ProjectEditor key={projectId} projectId={projectId} />;
 }
 
@@ -35,22 +43,56 @@ interface ProjectEditorProps {
 }
 
 function ProjectEditor({ projectId }: ProjectEditorProps) {
-  const { settings, update } = useSettings();
-  const {
-    projects,
-    updateSubtitles,
-    renameProject,
-    deleteProject,
-    isMigrating,
-  } = useProjects();
-  const subs = useProjectSubtitles({ projects, updateSubtitles, projectId });
-  const playback = usePlayback({ add: subs.add, projectId });
+  const settings = useSelector(
+    settingsStore,
+    (snapshot) => snapshot.context.settings,
+  );
+  const projects = useSelector(
+    projectsStore,
+    (snapshot) => snapshot.context.projects,
+  );
+  const isMigrating = useSelector(
+    projectsStore,
+    (snapshot) => snapshot.context.isMigrating,
+  );
+  const playback = usePlaybackMachine(projectId);
   const navigate = useNavigate();
 
   const project = projects.find((item) => item.id === projectId);
+  const subtitles = project?.subtitles ?? [];
+
+  const updateSettings = (patch: Partial<Settings>) => {
+    settingsStore.trigger.update({ patch });
+  };
+
+  const updateText = (id: string, text: string) => {
+    projectsStore.trigger.updateSubtitles({
+      id: projectId,
+      updater: (prev) => updateSubtitleText(prev, id, text),
+    });
+  };
+  const setManualEnd = (id: string, endMs: number | null) => {
+    projectsStore.trigger.updateSubtitles({
+      id: projectId,
+      updater: (prev) => setSubtitleManualEnd(prev, id, endMs),
+    });
+  };
+  const nudgeStart = (id: string, deltaMs: number) => {
+    projectsStore.trigger.updateSubtitles({
+      id: projectId,
+      updater: (prev) => nudgeSubtitleStart(prev, id, deltaMs),
+    });
+  };
+  const removeLine = (id: string) => {
+    projectsStore.trigger.updateSubtitles({
+      id: projectId,
+      updater: (prev) => removeSubtitle(prev, id),
+    });
+  };
+
   const lines = useMemo(
-    () => sortedWithEnds(subs.subtitles, settings),
-    [subs.subtitles, settings],
+    () => sortedWithEnds(subtitles, settings),
+    [subtitles, settings],
   );
   // Timeline scale: the real video duration when loaded, else the last line's end.
   const durationMs = useMemo(
@@ -97,7 +139,8 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
     ) {
       return;
     }
-    deleteProject(project.id);
+    void deleteHandle(project.id);
+    projectsStore.trigger.deleteProject({ id: project.id });
     navigate({ to: "/" });
   };
 
@@ -123,7 +166,9 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
     <div className="mx-auto flex max-w-6xl flex-col gap-4 p-6">
       <ProjectHeader
         project={project}
-        onRename={(name) => renameProject(project.id, name)}
+        onRename={(name) =>
+          projectsStore.trigger.renameProject({ id: project.id, name })
+        }
         onDelete={handleDelete}
       />
 
@@ -162,7 +207,7 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
         </div>
 
         <div className="flex flex-col gap-3">
-          <SettingsPanel settings={settings} onChange={update} />
+          <SettingsPanel settings={settings} onChange={updateSettings} />
           {lines.length === 0 ? (
             <p className="py-6 text-center text-sm text-neutral-500">
               No subtitles yet — pause the video and type the first line.
@@ -177,10 +222,10 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
                   active={line.id === (activeLine?.id ?? null)}
                   onPlayRange={playback.playRange}
                   onJumpTo={playback.seekTo}
-                  onUpdateText={subs.updateText}
-                  onSetManualEnd={subs.setManualEnd}
-                  onNudge={subs.nudgeStart}
-                  onDelete={subs.remove}
+                  onUpdateText={updateText}
+                  onSetManualEnd={setManualEnd}
+                  onNudge={nudgeStart}
+                  onDelete={removeLine}
                 />
               ))}
             </ul>
