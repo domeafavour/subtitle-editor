@@ -2,6 +2,7 @@ import { useCallback } from "react";
 
 import {
   addSubtitle,
+  cycleSubtitleSpeaker,
   nudgeSubtitleStart,
   removeSubtitle,
   setSubtitleManualEnd,
@@ -18,6 +19,8 @@ export interface SubtitlesApi {
   setManualEnd: (id: string, endMs: number | null) => void;
   nudgeStart: (id: string, deltaMs: number) => void;
   remove: (id: string) => void;
+  /** Advance a line's speaker label one step (`none → A → B → C → none`). */
+  cycleSpeaker: (id: string) => void;
 }
 
 interface UseProjectSubtitlesArgs {
@@ -78,5 +81,20 @@ export function useProjectSubtitles({
     [projectId, updateSubtitles],
   );
 
-  return { subtitles, add, updateText, setManualEnd, nudgeStart, remove };
+  const cycleSpeaker = useCallback(
+    (id: string) => {
+      updateSubtitles(projectId, (prev) => cycleSubtitleSpeaker(prev, id));
+    },
+    [projectId, updateSubtitles],
+  );
+
+  return {
+    subtitles,
+    add,
+    updateText,
+    setManualEnd,
+    nudgeStart,
+    remove,
+    cycleSpeaker,
+  };
 }

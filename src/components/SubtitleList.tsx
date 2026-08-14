@@ -12,6 +12,8 @@ interface SubtitleListProps {
   onUpdateText: (id: string, text: string) => void;
   onSetManualEnd: (id: string, endMs: number | null) => void;
   onNudge: (id: string, deltaMs: number) => void;
+  /** Advance a line's speaker label one step (`none → A → B → C → none`). */
+  onCycleSpeaker: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
@@ -25,6 +27,7 @@ export function SubtitleList({
   onUpdateText,
   onSetManualEnd,
   onNudge,
+  onCycleSpeaker,
   onDelete,
 }: SubtitleListProps) {
   if (lines.length === 0) {
@@ -48,6 +51,7 @@ export function SubtitleList({
           onUpdateText={onUpdateText}
           onSetManualEnd={onSetManualEnd}
           onNudge={onNudge}
+          onCycleSpeaker={onCycleSpeaker}
           onDelete={onDelete}
         />
       ))}

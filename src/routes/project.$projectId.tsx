@@ -172,6 +172,7 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
             onUpdateText={subs.updateText}
             onSetManualEnd={subs.setManualEnd}
             onNudge={subs.nudgeStart}
+            onCycleSpeaker={subs.cycleSpeaker}
             onDelete={subs.remove}
           />
         </div>
