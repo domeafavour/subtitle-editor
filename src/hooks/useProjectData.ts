@@ -1,9 +1,10 @@
 import { useSelector } from "@xstate/react";
 import { useCallback, useMemo } from "react";
-
+import { measureSpeechDuration } from "#/lib/speechDuration";
 import {
   nudgeSubtitleStart,
   removeSubtitle,
+  setSpeechDurationMs,
   setSubtitleManualEnd,
   updateSubtitleText,
 } from "#/lib/subtitles";
@@ -54,14 +55,28 @@ export function useLines(): SubtitleWithEnd[] {
  */
 export function useSubtitleActions() {
   const projectId = useProjectId();
+  const endMode = useSelector(
+    settingsStore,
+    (snapshot) => snapshot.context.settings.endMode,
+  );
   const updateText = useCallback(
     (id: string, text: string) => {
       projectsStore.trigger.updateSubtitles({
         id: projectId,
         updater: (prev) => updateSubtitleText(prev, id, text),
       });
+      // Speech mode: re-measure the edited text's spoken duration.
+      if (endMode === "speech") {
+        void measureSpeechDuration(text).then((ms) => {
+          if (ms == null) return;
+          projectsStore.trigger.updateSubtitles({
+            id: projectId,
+            updater: (prev) => setSpeechDurationMs(prev, id, ms),
+          });
+        });
+      }
     },
-    [projectId],
+    [endMode, projectId],
   );
   const setManualEnd = useCallback(
     (id: string, endMs: number | null) => {

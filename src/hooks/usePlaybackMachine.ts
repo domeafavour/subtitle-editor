@@ -1,12 +1,13 @@
 import { useMachine } from "@xstate/react";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-
-import { addSubtitle } from "#/lib/subtitles";
+import { measureSpeechDuration } from "#/lib/speechDuration";
+import { addSubtitle, setSpeechDurationMs } from "#/lib/subtitles";
 import type { Draft } from "#/lib/types";
 import { readStoredHandle, storeHandle } from "#/lib/videoHandleStore";
 import { playbackMachine } from "#/store/playbackMachine";
 import { projectsStore } from "#/store/projectsStore";
+import { settingsStore } from "#/store/settingsStore";
 
 export interface PlaybackApi {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -70,10 +71,24 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
             if (event.type !== "commitDraft") return;
             const startMs = context.draft?.startMs;
             if (startMs == null) return;
+            const id = crypto.randomUUID();
             projectsStore.trigger.updateSubtitles({
               id: projectId,
-              updater: (prev) => addSubtitle(prev, startMs, event.text),
+              updater: (prev) => addSubtitle(prev, startMs, event.text, id),
             });
+            // Speech mode: measure the new line's spoken duration (silently)
+            // and store it; the derived end reflows when it lands.
+            if (
+              settingsStore.getSnapshot().context.settings.endMode === "speech"
+            ) {
+              void measureSpeechDuration(event.text).then((ms) => {
+                if (ms == null) return;
+                projectsStore.trigger.updateSubtitles({
+                  id: projectId,
+                  updater: (prev) => setSpeechDurationMs(prev, id, ms),
+                });
+              });
+            }
           },
         },
       }),
