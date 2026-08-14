@@ -27,6 +27,11 @@ type PlaybackEvent =
   | { type: "reconnectCancel" }
   | { type: "play" }
   | { type: "paused"; startMs: number }
+  /**
+   * A DOM pause that must not open a draft — sent by the hook when the
+   * "open draft on pause" setting is off (pausing just pauses).
+   */
+  | { type: "pausedNoDraft"; startMs: number }
   /** Open the draft composer manually at an arbitrary playhead position. */
   | { type: "openDraft"; startMs: number }
   | { type: "rangePlay"; startMs: number; endMs: number }
@@ -196,6 +201,7 @@ export const playbackMachine = setup({
               target: "paused",
               actions: [{ type: "openDraft" }],
             },
+            pausedNoDraft: { target: "paused" },
             openDraft: { actions: [{ type: "openDraft" }] },
             rangePlay: { actions: [{ type: "setActiveRange" }] },
             rangeEnd: {
