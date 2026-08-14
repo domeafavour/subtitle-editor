@@ -75,6 +75,15 @@ The chronological ordering of subtitles. Always derived from start times;
 never stored.
 _Avoid_: sequence, index
 
+**Speaker**:
+An optional `A`/`B`/`C` label on a subtitle saying who speaks the line, assigned
+by the per-line speaker button (click cycles `none → A → B → C → none`). A
+label is just a letter — names are not supported. Clicking the button also
+reads the line's text aloud via browser text-to-speech (text only, never the
+letter) so the line can be heard while assigning. Exported as a `- A` prefix on
+the SRT cue body's first line and a WebVTT `<v A>` voice tag.
+_Avoid_: person, voice, dialogue tag
+
 **Project**:
 A named bundle of one video's subtitles: a stable id, a display name (defaults
 to the video's base name, renamable), the original video file name, a creation
