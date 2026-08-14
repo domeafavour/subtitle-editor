@@ -34,9 +34,10 @@ export function useProject(): Project | null {
 
 /**
  * The current project's subtitles, chronologically sorted with derived end
- * times attached. Memoized on the project and reading-speed settings so the
- * array (and the line objects inside) stay referentially stable across renders
- * — required by `useActiveLine` and the Timeline/Overlay rAF loops.
+ * times attached and the project's timing offset applied. Memoized on the
+ * project and reading-speed settings so the array (and the line objects
+ * inside) stay referentially stable across renders — required by
+ * `useActiveLine` and the Timeline/Overlay rAF loops.
  */
 export function useLines(): SubtitleWithEnd[] {
   const project = useProject();
@@ -45,7 +46,12 @@ export function useLines(): SubtitleWithEnd[] {
     (snapshot) => snapshot.context.settings,
   );
   return useMemo(
-    () => sortedWithEnds(project?.subtitles ?? [], settings),
+    () =>
+      sortedWithEnds(
+        project?.subtitles ?? [],
+        settings,
+        project?.timingOffsetMs ?? 0,
+      ),
     [project, settings],
   );
 }
@@ -56,6 +62,7 @@ export function useLines(): SubtitleWithEnd[] {
  */
 export function useSubtitleActions() {
   const projectId = useProjectId();
+  const project = useProject();
   const endMode = useSelector(
     settingsStore,
     (snapshot) => snapshot.context.settings.endMode,
@@ -85,12 +92,20 @@ export function useSubtitleActions() {
   );
   const setManualEnd = useCallback(
     (id: string, endMs: number | null) => {
+      // The editor shows shifted times; store the raw value by unshifting so
+      // validation and later rendering stay consistent with the capture time.
+      const offsetMs = project?.timingOffsetMs ?? 0;
       projectsStore.trigger.updateSubtitles({
         id: projectId,
-        updater: (prev) => setSubtitleManualEnd(prev, id, endMs),
+        updater: (prev) =>
+          setSubtitleManualEnd(
+            prev,
+            id,
+            endMs == null ? null : endMs - offsetMs,
+          ),
       });
     },
-    [projectId],
+    [project?.timingOffsetMs, projectId],
   );
   const nudgeStart = useCallback(
     (id: string, deltaMs: number) => {
