@@ -3,6 +3,7 @@ import { useSelector } from "@xstate/react";
 import { useCallback } from "react";
 
 import { ProjectHeader } from "#/components/ProjectHeader";
+import { ShiftTiming } from "#/components/ShiftTiming";
 import { SubtitleInput } from "#/components/SubtitleInput";
 import { SubtitleRow } from "#/components/SubtitleRow";
 import { Timeline } from "#/components/Timeline";
@@ -131,12 +132,13 @@ function EditorShell() {
         {/* Video + timeline stay pinned on wide screens while the list
             scrolls; on narrow screens they scroll with the page. */}
         <div className="lg:sticky lg:top-14 lg:self-start">
-          <div className="h-12 inline-flex items-center">
+          <div className="h-12 inline-flex items-center justify-between gap-3 w-full">
             {project?.videoName && (
               <span className="min-w-0 truncate text-base text-neutral-500">
                 {project.videoName}
               </span>
             )}
+            <ShiftTiming />
           </div>
           <div className="flex flex-col gap-2">
             <VideoStage />

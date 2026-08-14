@@ -2,6 +2,7 @@ import type { KeyboardEvent } from "react";
 import { useEffect, useRef } from "react";
 
 import { usePlayback } from "#/hooks/editorContext";
+import { useProject } from "#/hooks/useProjectData";
 import { formatTimestamp } from "#/lib/format";
 
 /**
@@ -11,8 +12,11 @@ import { formatTimestamp } from "#/lib/format";
  */
 export function SubtitleInput() {
   const playback = usePlayback();
+  const project = useProject();
   const ref = useRef<HTMLTextAreaElement | null>(null);
   const draft = playback.draft;
+  // The composer shows the shifted capture time, matching the row display.
+  const offsetMs = project?.timingOffsetMs ?? 0;
 
   useEffect(() => {
     if (draft) ref.current?.focus();
@@ -39,7 +43,7 @@ export function SubtitleInput() {
       <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-3 shadow-xl">
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="font-mono text-xs text-neutral-400">
-            New line at {formatTimestamp(draft.startMs)}
+            New line at {formatTimestamp(draft.startMs + offsetMs)}
           </div>
           <button
             type="button"
