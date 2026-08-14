@@ -213,7 +213,16 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
       // lands on paused before the DOM pause event arrives.
       send({ type: "ended" });
     } else {
-      send({ type: "paused", startMs: Math.round(video.currentTime * 1000) });
+      const startMs = Math.round(video.currentTime * 1000);
+      // Respect the "open draft on pause" setting — off means pausing just
+      // pauses (lines are added manually via + Add line / `n`).
+      const openDraft =
+        settingsStore.getSnapshot().context.settings.openDraftOnPause;
+      send(
+        openDraft
+          ? { type: "paused", startMs }
+          : { type: "pausedNoDraft", startMs },
+      );
     }
   }, [send]);
 
