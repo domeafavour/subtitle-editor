@@ -62,6 +62,18 @@ export function createProjectsStore(storage?: StateStorage) {
           ),
         };
       },
+      setTimingOffset: (context, event: { id: string; offsetMs: number }) => {
+        if (!Number.isFinite(event.offsetMs)) return context;
+        const offsetMs = Math.round(event.offsetMs);
+        return {
+          ...context,
+          projects: context.projects.map((project) =>
+            project.id === event.id
+              ? { ...project, timingOffsetMs: offsetMs }
+              : project,
+          ),
+        };
+      },
       deleteProject: (context, event: { id: string }) => ({
         ...context,
         projects: context.projects.filter((project) => project.id !== event.id),
