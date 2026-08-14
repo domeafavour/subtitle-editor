@@ -17,7 +17,7 @@ export function SettingsPanel() {
   };
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+    <div className="min-w-80 rounded-lg border border-neutral-800 bg-neutral-900 p-3">
       <h2 className="mb-2 text-sm font-semibold text-neutral-200">Timing</h2>
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-1">
