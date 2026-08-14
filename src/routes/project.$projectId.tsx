@@ -76,7 +76,11 @@ function EditorShell() {
   const playback = usePlayback();
   const lines = useLines();
   // The line containing the video's current time (highlighted in the list).
-  const activeLine = useActiveLine(lines, playback.videoRef);
+  const activeLine = useActiveLine(
+    lines,
+    playback.videoRef,
+    playback.isPlaying,
+  );
 
   // `[` seeks to the previous line's start (vim `b`), `]` to the current
   // line's end (vim `e`). Both end paused (no auto-play).
