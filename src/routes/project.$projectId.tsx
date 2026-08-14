@@ -14,6 +14,9 @@ import { useLines, useProject } from "#/hooks/useProjectData";
 import { lineAtPosition, previousLineStartMs } from "#/lib/timing";
 import { projectsStore } from "#/store/projectsStore";
 
+/** One 30 fps video frame (1000 / 30) — the ← / → step size. */
+const FRAME_MS = 33;
+
 export const Route = createFileRoute("/project/$projectId")({
   component: ProjectRoute,
 });
@@ -93,10 +96,25 @@ function EditorShell() {
     if (line) playback.seekTo(line.endMs);
   }, [lines, playback.seekTo, playback.videoRef]);
 
+  // ← / → step the playhead by one frame (paused, like the `[`/`]` jumps).
+  const stepBackward = useCallback(() => {
+    const video = playback.videoRef.current;
+    if (!video) return;
+    playback.seekTo(Math.round(video.currentTime * 1000) - FRAME_MS);
+  }, [playback.seekTo, playback.videoRef]);
+
+  const stepForward = useCallback(() => {
+    const video = playback.videoRef.current;
+    if (!video) return;
+    playback.seekTo(Math.round(video.currentTime * 1000) + FRAME_MS);
+  }, [playback.seekTo, playback.videoRef]);
+
   useGlobalShortcuts({
     togglePlayPause: playback.togglePlayPause,
     jumpToStart,
     jumpToEnd,
+    stepBackward,
+    stepForward,
   });
   const project = useProject();
 
