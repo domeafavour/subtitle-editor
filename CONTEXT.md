@@ -41,6 +41,12 @@ back to the reading estimate. Machine/voice-specific; re-edit a line to
 re-measure.
 _Avoid_: spoken duration, TTS estimate
 
+**Measuring**:
+A line whose speech duration is being measured — its row's end time shows a
+spinner (and the reading fallback underneath) until the measurement lands or
+fails, at which point the marker clears.
+_Avoid_: pending, loading duration
+
 **End override**:
 An optional user-entered end time stored on a line, in absolute video
 milliseconds. When present it replaces the reading estimate for that line's
