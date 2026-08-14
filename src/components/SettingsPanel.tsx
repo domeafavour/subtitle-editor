@@ -56,7 +56,7 @@ export function SettingsPanel() {
 
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-neutral-400">Chars / sec</span>
+          <span className="text-xs text-neutral-400">Chars / sec</span>{" "}
           <input
             type="number"
             min={1}
@@ -111,6 +111,20 @@ export function SettingsPanel() {
           </>
         )}
       </p>
+
+      <label className="mt-3 flex items-start gap-2 border-t border-neutral-800 pt-3">
+        <input
+          type="checkbox"
+          checked={settings.openDraftOnPause}
+          onChange={(event) =>
+            update({ openDraftOnPause: event.target.checked })
+          }
+          className="mt-0.5 h-3.5 w-3.5 accent-blue-500"
+        />
+        <span className="text-xs text-neutral-300">
+          Open a draft when the video pauses
+        </span>
+      </label>
     </div>
   );
 }
