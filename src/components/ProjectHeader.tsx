@@ -6,10 +6,14 @@ import { useProject } from "#/hooks/useProjectData";
 import { deleteHandle } from "#/lib/videoHandleStore";
 import { projectsStore } from "#/store/projectsStore";
 
+import { ExportMenu } from "./ExportMenu";
+import { Popover } from "./Popover";
+import { SettingsPanel } from "./SettingsPanel";
+
 /**
- * Editor header: back link, click-to-edit project name, video name, delete.
- * Reads the current project from the global store and fires store triggers
- * directly — no props.
+ * Editor header: back link, click-to-edit project name, video name, and the
+ * action cluster at the top-right (Export dropdown, Timing settings gear,
+ * delete). Reads the current project from the global store — no props.
  */
 export function ProjectHeader() {
   const project = useProject();
@@ -90,13 +94,34 @@ export function ProjectHeader() {
           {project.videoName}
         </span>
       )}
-      <button
-        type="button"
-        onClick={handleDelete}
-        className="ml-auto shrink-0 rounded bg-neutral-800 px-3 py-1.5 text-sm text-neutral-300 hover:bg-red-950 hover:text-red-300"
-      >
-        Delete project
-      </button>
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <ExportMenu />
+        <Popover
+          button={({ open, toggle }) => (
+            <button
+              type="button"
+              onClick={toggle}
+              aria-haspopup="dialog"
+              aria-expanded={open}
+              aria-label="Timing settings"
+              title="Timing settings"
+              className="rounded bg-neutral-800 px-2.5 py-1.5 text-sm text-neutral-200 transition-colors hover:bg-neutral-700"
+            >
+              ⚙
+            </button>
+          )}
+          panelClassName="shadow-lg"
+        >
+          <SettingsPanel />
+        </Popover>
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="rounded bg-neutral-800 px-3 py-1.5 text-sm text-neutral-300 hover:bg-red-950 hover:text-red-300"
+        >
+          Delete project
+        </button>
+      </div>
     </header>
   );
 }
