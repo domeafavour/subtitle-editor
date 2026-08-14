@@ -133,6 +133,14 @@ is loaded). Clicking a block plays that line's range; a vertical playhead tracks
 the current video time.
 _Avoid_: scrubber, waveform, track
 
+**Timing offset**:
+A per-project shift in milliseconds applied to every line's displayed and
+exported times — the whole track moves earlier or later to line up with the
+video. Stored captures are never rewritten (it is a reversible view transform;
+reset to 0 to restore them). A line added while an offset is set is captured
+raw and displayed shifted like everything else.
+_Avoid_: shift-all, global offset, sync offset
+
 **Migration**:
 The one-time move of pre-project data (the retired `subtitle-editor.subtitles.v1`
 list and the legacy IndexedDB `video` handle) into a project on first load.
