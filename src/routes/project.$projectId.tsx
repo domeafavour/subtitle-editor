@@ -105,7 +105,6 @@ function EditorShell() {
 
       <VideoStage />
       <Timeline />
-      <SubtitleInput />
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-neutral-300">Subtitles</h2>
@@ -139,6 +138,8 @@ function EditorShell() {
           ))}
         </ul>
       )}
+      {/* Floating draft composer — fixed to the viewport, never in flow. */}
+      <SubtitleInput />
     </div>
   );
 }

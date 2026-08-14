@@ -31,19 +31,25 @@ export function SubtitleInput() {
   };
 
   return (
-    <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-3">
-      <div className="mb-1 font-mono text-xs text-neutral-400">
-        New line at {formatTimestamp(draft.startMs)}
-      </div>
-      <textarea
-        ref={ref}
-        rows={2}
-        placeholder="Type the subtitle…"
-        onKeyDown={handleKeyDown}
-        className="w-full resize-none rounded border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-blue-500"
-      />
-      <div className="mt-1 text-xs text-neutral-500">
-        Enter to commit · Shift+Enter for a new line · Esc to cancel
+    // Fixed overlay, bottom-center of the viewport: opening/canceling the
+    // draft never shifts the page layout. Deliberately not dismissible by
+    // outside click — typed text lives only in this textarea and an
+    // accidental click would silently lose it; Enter/Esc are the only exits.
+    <div className="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
+      <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-3 shadow-xl">
+        <div className="mb-1 font-mono text-xs text-neutral-400">
+          New line at {formatTimestamp(draft.startMs)}
+        </div>
+        <textarea
+          ref={ref}
+          rows={2}
+          placeholder="Type the subtitle…"
+          onKeyDown={handleKeyDown}
+          className="w-full resize-none rounded border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-blue-500"
+        />
+        <div className="mt-1 text-xs text-neutral-500">
+          Enter to commit · Shift+Enter for a new line · Esc to cancel
+        </div>
       </div>
     </div>
   );
