@@ -118,6 +118,45 @@ describe("playbackMachine — the draft rule", () => {
     actor.send({ type: "cancelDraft" });
     expect(actor.getSnapshot().context.draft).toBeNull();
   });
+
+  it("opens a draft manually while paused (the Add line button)", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "openDraft", startMs: 2_500 });
+    expect(actor.getSnapshot().matches({ ready: "paused" })).toBe(true);
+    expect(actor.getSnapshot().context.draft).toEqual({ startMs: 2_500 });
+  });
+
+  it("opens a draft manually while playing, then re-anchors on the DOM pause", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "play" });
+    actor.send({ type: "openDraft", startMs: 2_000 });
+    // The machine itself does not pause; the hook pauses the DOM video, whose
+    // `paused` event then lands here and re-anchors the draft.
+    expect(actor.getSnapshot().matches({ ready: "playing" })).toBe(true);
+    expect(actor.getSnapshot().context.draft).toEqual({ startMs: 2_000 });
+
+    actor.send({ type: "paused", startMs: 2_010 });
+    expect(actor.getSnapshot().matches({ ready: "paused" })).toBe(true);
+    expect(actor.getSnapshot().context.draft).toEqual({ startMs: 2_010 });
+  });
+
+  it("clears an active range when a manual open interrupts a range play", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "rangePlay", startMs: 1_000, endMs: 5_000 });
+    actor.send({ type: "openDraft", startMs: 3_000 });
+    expect(actor.getSnapshot().context.draft).toEqual({ startMs: 3_000 });
+    expect(actor.getSnapshot().context.activeRange).toBeNull();
+  });
+
+  it("ignores a manual open without a video", () => {
+    const actor = newActor();
+    actor.send({ type: "openDraft", startMs: 500 });
+    expect(actor.getSnapshot().value).toBe("empty");
+    expect(actor.getSnapshot().context.draft).toBeNull();
+  });
 });
 
 describe("playbackMachine — committing a draft", () => {
@@ -163,6 +202,29 @@ describe("playbackMachine — committing a draft", () => {
 
     expect(commits).toHaveLength(0);
     expect(actor.getSnapshot().context.draft).toEqual({ startMs: 500 });
+  });
+
+  it("commits a manually opened draft at its captured start", () => {
+    const commits: Array<{ startMs: number; text: string }> = [];
+    const machine = playbackMachine.provide({
+      actions: {
+        commitDraft: ({ context, event }) => {
+          if (event.type !== "commitDraft") return;
+          commits.push({
+            startMs: context.draft?.startMs ?? -1,
+            text: event.text,
+          });
+        },
+      },
+    });
+    const actor = createActor(machine);
+    actor.start();
+    load(actor);
+    actor.send({ type: "openDraft", startMs: 2_500 });
+    actor.send({ type: "commitDraft", text: "Hello" });
+
+    expect(commits).toEqual([{ startMs: 2_500, text: "Hello" }]);
+    expect(actor.getSnapshot().context.draft).toBeNull();
   });
 });
 
