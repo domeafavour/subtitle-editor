@@ -1,9 +1,11 @@
+import { useSelector } from "@xstate/react";
 import { useEffect, useMemo, useState } from "react";
 
 import { usePlayback } from "#/hooks/editorContext";
 import { useLines } from "#/hooks/useProjectData";
 import { formatTimestamp } from "#/lib/format";
 import { blockGeometry, playheadPercent } from "#/lib/timeline";
+import { speechMeasureStore } from "#/store/speechMeasureStore";
 
 /**
  * Horizontal track showing each line's `[start, end)` as a block, scaled
@@ -15,6 +17,11 @@ import { blockGeometry, playheadPercent } from "#/lib/timeline";
 export function Timeline() {
   const playback = usePlayback();
   const lines = useLines();
+  // Line ids with an in-flight speech-duration measurement.
+  const measuring = useSelector(
+    speechMeasureStore,
+    (snapshot) => snapshot.context.measuring,
+  );
   // Scale: the real video duration when loaded, else the last line's end.
   const durationMs =
     playback.videoDuration ?? lines[lines.length - 1]?.endMs ?? 0;
@@ -65,22 +72,29 @@ export function Timeline() {
       {durationMs > 0 &&
         lines.map((line, index) => {
           const geometry = geometries[index];
+          const isMeasuring = measuring.includes(line.id);
           const label = `${formatTimestamp(line.startMs)} → ${formatTimestamp(line.endMs)} · ${line.text}`;
           return (
             <button
               key={line.id}
               type="button"
               onClick={() => playback.playRange(line.startMs, line.endMs)}
-              title={label}
-              aria-label={label}
+              title={
+                isMeasuring ? `Measuring speech duration… · ${label}` : label
+              }
+              aria-label={
+                isMeasuring ? `Measuring speech duration… · ${label}` : label
+              }
               style={{
                 left: `${geometry.leftPercent}%`,
                 width: `${geometry.widthPercent}%`,
               }}
               className={`absolute top-1 bottom-1 rounded-sm transition-colors ${
-                line.manualEndMs != null
-                  ? "bg-blue-500/70 hover:bg-blue-400/80"
-                  : "bg-neutral-600 hover:bg-neutral-500"
+                isMeasuring
+                  ? "animate-pulse bg-neutral-500"
+                  : line.manualEndMs != null
+                    ? "bg-blue-500/70 hover:bg-blue-400/80"
+                    : "bg-neutral-600 hover:bg-neutral-500"
               }`}
             />
           );

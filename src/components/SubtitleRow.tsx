@@ -1,3 +1,4 @@
+import { useSelector } from "@xstate/react";
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -10,6 +11,7 @@ import {
 } from "#/lib/format";
 import { speakText } from "#/lib/speech";
 import type { SubtitleWithEnd } from "#/lib/types";
+import { speechMeasureStore } from "#/store/speechMeasureStore";
 
 interface SubtitleRowProps {
   /** The line this row renders — the one genuinely per-row value. */
@@ -28,6 +30,9 @@ interface SubtitleRowProps {
 export function SubtitleRow({ line, active }: SubtitleRowProps) {
   const playback = usePlayback();
   const { updateText, setManualEnd, nudgeStart, remove } = useSubtitleActions();
+  const measuring = useSelector(speechMeasureStore, (snapshot) =>
+    snapshot.context.measuring.includes(line.id),
+  );
   const videoLoaded = playback.videoUrl != null;
   const [editingText, setEditingText] = useState(false);
   const [editValue, setEditValue] = useState(line.text);
@@ -144,13 +149,30 @@ export function SubtitleRow({ line, active }: SubtitleRowProps) {
             <button
               type="button"
               onClick={startEndEdit}
-              title={manual ? "End time (manual)" : "End time (automatic)"}
-              className={`rounded px-1 py-0.5 font-mono text-xs whitespace-nowrap hover:bg-neutral-800 ${
+              title={
+                measuring
+                  ? "Measuring speech duration…"
+                  : manual
+                    ? "End time (manual)"
+                    : "End time (automatic)"
+              }
+              className={`rounded px-1 py-0.5 items-center font-mono text-xs whitespace-nowrap hover:bg-neutral-800 ${
                 manual ? "text-blue-300" : "text-neutral-400"
               }`}
             >
-              {manual && <span aria-hidden="true">● </span>}
-              {formatTimestamp(line.endMs)}
+              {measuring ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className="h-3 w-3 animate-spin rounded-full border-2 border-neutral-500 border-t-transparent"
+                  />
+                </span>
+              ) : (
+                <>
+                  {manual && <span aria-hidden="true">● </span>}
+                  {formatTimestamp(line.endMs)}
+                </>
+              )}
             </button>
             {manual && (
               <button
