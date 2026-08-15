@@ -132,7 +132,9 @@ function EditorShell() {
         <ProjectHeader />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px] px-6">
+      {/* minmax(0, 1fr) so the track can't grow from content — the timeline's
+          scrollable content is far wider than the viewport for long videos. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px] px-6">
         {/* Video + timeline stay pinned on wide screens while the list
             scrolls; on narrow screens they scroll with the page. */}
         <div className="lg:sticky lg:top-14 lg:self-start">
