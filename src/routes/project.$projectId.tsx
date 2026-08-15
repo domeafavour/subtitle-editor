@@ -12,7 +12,6 @@ import { EditorProvider, usePlayback } from "#/hooks/editorContext";
 import { useActiveLine } from "#/hooks/useActiveLine";
 import { useGlobalShortcuts } from "#/hooks/useGlobalShortcuts";
 import { useLines, useProject } from "#/hooks/useProjectData";
-import { lineAtPosition, previousLineStartMs } from "#/lib/timing";
 import { projectsStore } from "#/store/projectsStore";
 
 /** One 30 fps video frame (1000 / 30) — the ← / → step size. */
@@ -80,39 +79,28 @@ function EditorShell() {
     lines,
     playback.videoRef,
     playback.isPlaying,
+    playback.currentTime,
   );
 
   // `[` seeks to the previous line's start (vim `b`), `]` to the current
-  // line's end (vim `e`). Both end paused (no auto-play).
+  // line's end (vim `e`). Both end paused (no auto-play). The DOM position is
+  // read inside the playback hook, not here.
   const jumpToStart = useCallback(() => {
-    const video = playback.videoRef.current;
-    if (!video) return;
-    const target = previousLineStartMs(
-      lines,
-      Math.round(video.currentTime * 1000),
-    );
-    if (target != null) playback.seekTo(target);
-  }, [lines, playback.seekTo, playback.videoRef]);
+    playback.seekToPreviousLineStart(lines);
+  }, [lines, playback.seekToPreviousLineStart]);
 
   const jumpToEnd = useCallback(() => {
-    const video = playback.videoRef.current;
-    if (!video) return;
-    const line = lineAtPosition(lines, Math.round(video.currentTime * 1000));
-    if (line) playback.seekTo(line.endMs);
-  }, [lines, playback.seekTo, playback.videoRef]);
+    playback.seekToLineEndAtPosition(lines);
+  }, [lines, playback.seekToLineEndAtPosition]);
 
   // ← / → step the playhead by one frame (paused, like the `[`/`]` jumps).
   const stepBackward = useCallback(() => {
-    const video = playback.videoRef.current;
-    if (!video) return;
-    playback.seekTo(Math.round(video.currentTime * 1000) - FRAME_MS);
-  }, [playback.seekTo, playback.videoRef]);
+    playback.seekRelative(-FRAME_MS);
+  }, [playback.seekRelative]);
 
   const stepForward = useCallback(() => {
-    const video = playback.videoRef.current;
-    if (!video) return;
-    playback.seekTo(Math.round(video.currentTime * 1000) + FRAME_MS);
-  }, [playback.seekTo, playback.videoRef]);
+    playback.seekRelative(FRAME_MS);
+  }, [playback.seekRelative]);
 
   useGlobalShortcuts({
     togglePlayPause: playback.togglePlayPause,
