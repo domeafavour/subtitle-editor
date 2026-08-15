@@ -1,10 +1,22 @@
 import { useSelector } from "@xstate/react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { usePlayback } from "#/hooks/editorContext";
 import { useLines } from "#/hooks/useProjectData";
 import { formatTimestamp } from "#/lib/format";
-import { blockGeometry, playheadPercent } from "#/lib/timeline";
+import {
+  blockGeometry,
+  MIN_BLOCK_WIDTH_PX,
+  playheadPx,
+  timelineScale,
+} from "#/lib/timeline";
 import { speechMeasureStore } from "#/store/speechMeasureStore";
 
 /**
@@ -13,6 +25,12 @@ import { speechMeasureStore } from "#/store/speechMeasureStore";
  * that line's range; a red playhead tracks the video's current time while it
  * plays. Reads the playback machine and the subtitle list from context —
  * no props.
+ *
+ * The track is pixel-scaled: short videos fill the container exactly, while
+ * long videos grow the content wider than the screen (horizontal scroll) at a
+ * minimum scale so every line keeps a visible `MIN_BLOCK_WIDTH_PX` width
+ * instead of shrinking to a sub-pixel sliver. The playhead auto-scrolls into
+ * view while playing and on seeks.
  */
 export function Timeline() {
   const playback = usePlayback();
@@ -27,18 +45,65 @@ export function Timeline() {
     playback.videoDuration ?? lines[lines.length - 1]?.endMs ?? 0;
   const [playheadMs, setPlayheadMs] = useState(0);
 
+  // The scroll container's width, kept current so short videos keep fitting
+  // the track while long videos fall back to the minimum scale.
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [trackWidth, setTrackWidth] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const measure = () => setTrackWidth(el.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Zoom: fills the container for short videos, floors at the minimum scale
+  // for long videos so every line stays at least `MIN_BLOCK_WIDTH_PX` wide.
+  const pxPerMs = useMemo(
+    () => timelineScale(durationMs, trackWidth),
+    [durationMs, trackWidth],
+  );
+
   const geometries = useMemo(
     () =>
-      lines.map((line) => blockGeometry(line.startMs, line.endMs, durationMs)),
-    [lines, durationMs],
+      lines.map((line) =>
+        blockGeometry(line.startMs, line.endMs, durationMs, pxPerMs),
+      ),
+    [lines, durationMs, pxPerMs],
+  );
+
+  // Keep the playhead visible when the content is wider than the track.
+  const scrollPlayheadIntoView = useCallback(
+    (ms: number) => {
+      const el = trackRef.current;
+      if (!el || pxPerMs <= 0) return;
+      const x = ms * pxPerMs;
+      const margin = 24;
+      if (x < el.scrollLeft + margin) {
+        el.scrollLeft = Math.max(0, x - margin);
+      } else if (x > el.scrollLeft + el.clientWidth - margin) {
+        el.scrollLeft = x - el.clientWidth + margin;
+      }
+    },
+    [pxPerMs],
   );
 
   // Snap the playhead on pause / scale change.
   // biome-ignore lint/correctness/useExhaustiveDependencies: isPlaying and durationMs are intentional triggers, not read in the body.
   useEffect(() => {
     const video = playback.videoRef.current;
-    setPlayheadMs(video ? Math.round(video.currentTime * 1000) : 0);
-  }, [playback.isPlaying, durationMs, playback.videoRef]);
+    const ms = video ? Math.round(video.currentTime * 1000) : 0;
+    setPlayheadMs(ms);
+    scrollPlayheadIntoView(ms);
+  }, [
+    playback.isPlaying,
+    durationMs,
+    playback.videoRef,
+    scrollPlayheadIntoView,
+  ]);
 
   // Move the playhead while playing (60 Hz, re-renders only this small track).
   useEffect(() => {
@@ -46,12 +111,16 @@ export function Timeline() {
     let frame = 0;
     const tick = () => {
       const video = playback.videoRef.current;
-      if (video) setPlayheadMs(video.currentTime * 1000);
+      if (video) {
+        const ms = video.currentTime * 1000;
+        setPlayheadMs(ms);
+        scrollPlayheadIntoView(ms);
+      }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playback.isPlaying, playback.videoRef]);
+  }, [playback.isPlaying, playback.videoRef, scrollPlayheadIntoView]);
 
   // Reflect paused seeks (e.g. the `[`/`]` jumps or dragging the native
   // progress bar) on the playhead — `timeupdate` fires on seek while paused.
@@ -60,51 +129,68 @@ export function Timeline() {
     if (!video || durationMs <= 0) return;
     const onTimeUpdate = () => {
       if (!playback.isPlaying) {
-        setPlayheadMs(Math.round(video.currentTime * 1000));
+        const ms = Math.round(video.currentTime * 1000);
+        setPlayheadMs(ms);
+        scrollPlayheadIntoView(ms);
       }
     };
     video.addEventListener("timeupdate", onTimeUpdate);
     return () => video.removeEventListener("timeupdate", onTimeUpdate);
-  }, [playback.isPlaying, durationMs, playback.videoRef]);
+  }, [
+    playback.isPlaying,
+    durationMs,
+    playback.videoRef,
+    scrollPlayheadIntoView,
+  ]);
 
   return (
-    <div className="relative h-10 w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
-      {durationMs > 0 &&
-        lines.map((line, index) => {
-          const geometry = geometries[index];
-          const isMeasuring = measuring.includes(line.id);
-          const label = `${formatTimestamp(line.startMs)} → ${formatTimestamp(line.endMs)} · ${line.text}`;
-          return (
-            <button
-              key={line.id}
-              type="button"
-              onClick={() => playback.playRange(line.startMs, line.endMs)}
-              title={
-                isMeasuring ? `Measuring speech duration… · ${label}` : label
-              }
-              aria-label={
-                isMeasuring ? `Measuring speech duration… · ${label}` : label
-              }
-              style={{
-                left: `${geometry.leftPercent}%`,
-                width: `${geometry.widthPercent}%`,
-              }}
-              className={`absolute top-1 bottom-1 rounded-sm transition-colors ${
-                isMeasuring
-                  ? "animate-pulse bg-neutral-500"
-                  : line.manualEndMs != null
-                    ? "bg-blue-500/70 hover:bg-blue-400/80"
-                    : "bg-neutral-600 hover:bg-neutral-500"
-              }`}
-            />
-          );
-        })}
-      {durationMs > 0 && (
+    <div
+      ref={trackRef}
+      className="relative h-10 min-w-0 max-w-full w-full overflow-x-auto rounded-lg border border-neutral-800 bg-neutral-900"
+    >
+      {durationMs > 0 && pxPerMs > 0 && (
         <div
-          aria-hidden="true"
-          className="pointer-events-none absolute top-0 bottom-0 w-px bg-red-500"
-          style={{ left: `${playheadPercent(playheadMs, durationMs)}%` }}
-        />
+          className="relative h-full min-w-full"
+          style={{ width: durationMs * pxPerMs }}
+        >
+          {lines.map((line, index) => {
+            const geometry = geometries[index];
+            const isMeasuring = measuring.includes(line.id);
+            const label = `${formatTimestamp(line.startMs)} → ${formatTimestamp(line.endMs)} · ${line.text}`;
+            return (
+              <button
+                key={line.id}
+                type="button"
+                onClick={() => playback.playRange(line.startMs, line.endMs)}
+                title={
+                  isMeasuring ? `Measuring speech duration… · ${label}` : label
+                }
+                aria-label={
+                  isMeasuring ? `Measuring speech duration… · ${label}` : label
+                }
+                style={{
+                  left: `${geometry.leftPx}px`,
+                  width: `${geometry.widthPx}px`,
+                  minWidth: MIN_BLOCK_WIDTH_PX,
+                }}
+                className={`absolute top-1 bottom-1 rounded-sm transition-colors hover:z-10 ${
+                  isMeasuring
+                    ? "animate-pulse bg-neutral-500"
+                    : line.manualEndMs != null
+                      ? "bg-blue-500/70 hover:bg-blue-400/80"
+                      : "bg-neutral-600 hover:bg-neutral-500"
+                }`}
+              />
+            );
+          })}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 bottom-0 w-px bg-red-500"
+            style={{
+              left: `${playheadPx(playheadMs, durationMs, pxPerMs)}px`,
+            }}
+          />
+        </div>
       )}
     </div>
   );
