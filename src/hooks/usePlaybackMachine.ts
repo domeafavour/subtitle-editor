@@ -3,7 +3,8 @@ import type { RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { measureSpeechDuration } from "#/lib/speechDuration";
 import { addSubtitle, setSpeechDurationMs } from "#/lib/subtitles";
-import type { Draft } from "#/lib/types";
+import { lineAtPosition, previousLineStartMs } from "#/lib/timing";
+import type { Draft, SubtitleWithEnd } from "#/lib/types";
 import { readStoredHandle, storeHandle } from "#/lib/videoHandleStore";
 import { playbackMachine } from "#/store/playbackMachine";
 import { projectsStore } from "#/store/projectsStore";
@@ -16,6 +17,12 @@ export interface PlaybackApi {
   videoName: string | null;
   /** Real video length in integer ms once metadata has loaded; null until then. */
   videoDuration: number | null;
+  /**
+   * The last settled video position in integer ms — updated on pause, seek,
+   * range end, natural end and draft open. Frozen while playing: live
+   * playback position stays in the DOM-driven rAF loops.
+   */
+  currentTime: number;
   isPlaying: boolean;
   draft: Draft | null;
   loadVideo: (file: File) => void;
@@ -37,6 +44,12 @@ export interface PlaybackApi {
   playRange: (startMs: number, endMs: number) => void;
   /** Seek to `ms` (video ms) and end paused. Clamps to 0; no-op without a video. */
   seekTo: (ms: number) => void;
+  /** Step the playhead by `deltaMs` (e.g. one frame) from the live position and pause. */
+  seekRelative: (deltaMs: number) => void;
+  /** Jump to the line start before the playhead and pause (vim `b`). */
+  seekToPreviousLineStart: (lines: SubtitleWithEnd[]) => void;
+  /** Jump to the current/next line's end and pause (vim `e`). */
+  seekToLineEndAtPosition: (lines: SubtitleWithEnd[]) => void;
   /**
    * Open the draft composer manually at the video's current position —
    * pausing the video first when it is playing. No-op without a loaded video.
@@ -50,6 +63,8 @@ export interface PlaybackApi {
   handleVideoPlay: () => void;
   /** Attach to the `<video>` element's onPause. */
   handleVideoPause: () => void;
+  /** Attach to the `<video>` element's onSeeked — keeps the settled position fresh. */
+  handleVideoSeeked: () => void;
 }
 
 /**
@@ -173,6 +188,41 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
     video.pause();
   }, []);
 
+  /** Step the playhead by `deltaMs` from the live position (←/→). */
+  const seekRelative = useCallback(
+    (deltaMs: number) => {
+      const video = videoRef.current;
+      if (!video) return;
+      seekTo(Math.round(video.currentTime * 1000) + deltaMs);
+    },
+    [seekTo],
+  );
+
+  /** Jump to the previous line's start, paused (vim `b` / `[`). */
+  const seekToPreviousLineStart = useCallback(
+    (lines: SubtitleWithEnd[]) => {
+      const video = videoRef.current;
+      if (!video) return;
+      const target = previousLineStartMs(
+        lines,
+        Math.round(video.currentTime * 1000),
+      );
+      if (target != null) seekTo(target);
+    },
+    [seekTo],
+  );
+
+  /** Jump to the current/next line's end, paused (vim `e` / `]`). */
+  const seekToLineEndAtPosition = useCallback(
+    (lines: SubtitleWithEnd[]) => {
+      const video = videoRef.current;
+      if (!video) return;
+      const line = lineAtPosition(lines, Math.round(video.currentTime * 1000));
+      if (line) seekTo(line.endMs);
+    },
+    [seekTo],
+  );
+
   const commitDraft = useCallback(
     (text: string) => send({ type: "commitDraft", text }),
     [send],
@@ -224,6 +274,15 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
           : { type: "pausedNoDraft", startMs },
       );
     }
+  }, [send]);
+
+  const handleVideoSeeked = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    send({
+      type: "seeked",
+      currentTimeMs: Math.round(video.currentTime * 1000),
+    });
   }, [send]);
 
   const reconnectVideo = useCallback(() => {
@@ -337,6 +396,7 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
     videoUrl: snapshot.context.videoUrl,
     videoName: snapshot.context.videoName,
     videoDuration: snapshot.context.videoDuration,
+    currentTime: snapshot.context.currentTime,
     isPlaying: snapshot.matches({ ready: "playing" }),
     draft: snapshot.context.draft,
     loadVideo,
@@ -348,11 +408,15 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
     togglePlayPause,
     playRange,
     seekTo,
+    seekRelative,
+    seekToPreviousLineStart,
+    seekToLineEndAtPosition,
     openDraftAtCurrentTime,
     commitDraft,
     cancelDraft,
     handleVideoMetadata,
     handleVideoPlay,
     handleVideoPause,
+    handleVideoSeeked,
   };
 }
