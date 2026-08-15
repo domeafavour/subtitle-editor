@@ -34,6 +34,7 @@ export function VideoStage() {
             onLoadedMetadata={playback.handleVideoMetadata}
             onPlay={playback.handleVideoPlay}
             onPause={playback.handleVideoPause}
+            onSeeked={playback.handleVideoSeeked}
             className="h-full w-full object-contain"
           />
           <PlaybackOverlay />

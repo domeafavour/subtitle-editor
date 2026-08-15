@@ -13,7 +13,12 @@ import { useLines } from "#/hooks/useProjectData";
 export function PlaybackOverlay() {
   const playback = usePlayback();
   const lines = useLines();
-  const active = useActiveLine(lines, playback.videoRef, playback.isPlaying);
+  const active = useActiveLine(
+    lines,
+    playback.videoRef,
+    playback.isPlaying,
+    playback.currentTime,
+  );
 
   return (
     <div className="pointer-events-none absolute inset-0 flex items-end justify-center p-4">

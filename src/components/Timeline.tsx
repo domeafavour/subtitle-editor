@@ -91,21 +91,17 @@ export function Timeline() {
     [pxPerMs],
   );
 
-  // Snap the playhead on pause / scale change.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: isPlaying and durationMs are intentional triggers, not read in the body.
+  // Reflect the settled position — pauses, keyboard/row seeks, native
+  // progress-bar drags (all reach the machine's `currentTime`) — and
+  // re-snap/scroll on scale changes (`scrollPlayheadIntoView` depends on
+  // `pxPerMs`, and a fresh video resets `currentTime` to 0).
   useEffect(() => {
-    const video = playback.videoRef.current;
-    const ms = video ? Math.round(video.currentTime * 1000) : 0;
-    setPlayheadMs(ms);
-    scrollPlayheadIntoView(ms);
-  }, [
-    playback.isPlaying,
-    durationMs,
-    playback.videoRef,
-    scrollPlayheadIntoView,
-  ]);
+    setPlayheadMs(playback.currentTime);
+    scrollPlayheadIntoView(playback.currentTime);
+  }, [playback.currentTime, scrollPlayheadIntoView]);
 
-  // Move the playhead while playing (60 Hz, re-renders only this small track).
+  // Move the playhead while playing (60 Hz, re-renders only this small track;
+  // `currentTime` is frozen while playing, so this is the live source).
   useEffect(() => {
     if (!playback.isPlaying) return;
     let frame = 0;
@@ -121,27 +117,6 @@ export function Timeline() {
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [playback.isPlaying, playback.videoRef, scrollPlayheadIntoView]);
-
-  // Reflect paused seeks (e.g. the `[`/`]` jumps or dragging the native
-  // progress bar) on the playhead — `timeupdate` fires on seek while paused.
-  useEffect(() => {
-    const video = playback.videoRef.current;
-    if (!video || durationMs <= 0) return;
-    const onTimeUpdate = () => {
-      if (!playback.isPlaying) {
-        const ms = Math.round(video.currentTime * 1000);
-        setPlayheadMs(ms);
-        scrollPlayheadIntoView(ms);
-      }
-    };
-    video.addEventListener("timeupdate", onTimeUpdate);
-    return () => video.removeEventListener("timeupdate", onTimeUpdate);
-  }, [
-    playback.isPlaying,
-    durationMs,
-    playback.videoRef,
-    scrollPlayheadIntoView,
-  ]);
 
   return (
     <div
