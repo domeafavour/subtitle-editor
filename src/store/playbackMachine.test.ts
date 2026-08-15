@@ -271,3 +271,80 @@ describe("playbackMachine — ranges and metadata", () => {
     expect(actor.getSnapshot().context.videoDuration).toBe(5_000);
   });
 });
+
+describe("playbackMachine — the settled currentTime", () => {
+  it("starts at 0 and resets when a video loads", () => {
+    const actor = newActor();
+    expect(actor.getSnapshot().context.currentTime).toBe(0);
+    actor.send({ type: "paused", startMs: 1_500 });
+    expect(actor.getSnapshot().context.currentTime).toBe(0);
+    load(actor);
+    expect(actor.getSnapshot().context.currentTime).toBe(0);
+  });
+
+  it("records the position on a user pause", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "play" });
+    actor.send({ type: "paused", startMs: 1_500 });
+    expect(actor.getSnapshot().context.currentTime).toBe(1_500);
+  });
+
+  it("records the position on a no-draft pause", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "play" });
+    actor.send({ type: "pausedNoDraft", startMs: 2_500 });
+    expect(actor.getSnapshot().context.currentTime).toBe(2_500);
+  });
+
+  it("records the position on a manual draft open", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "openDraft", startMs: 2_500 });
+    expect(actor.getSnapshot().context.currentTime).toBe(2_500);
+  });
+
+  it("frozen while playing: records the start and keeps it until an event", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "rangePlay", startMs: 1_000, endMs: 5_000 });
+    expect(actor.getSnapshot().context.currentTime).toBe(1_000);
+    // No per-frame ticks: the position stays at the last settled event.
+    expect(actor.getSnapshot().context.currentTime).toBe(1_000);
+  });
+
+  it("records the range end when a range finishes", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "rangePlay", startMs: 1_000, endMs: 5_000 });
+    actor.send({ type: "rangeEnd" });
+    expect(actor.getSnapshot().context.currentTime).toBe(5_000);
+  });
+
+  it("records the video duration on natural end", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "metadata", durationMs: 7_000 });
+    actor.send({ type: "play" });
+    actor.send({ type: "ended" });
+    expect(actor.getSnapshot().context.currentTime).toBe(7_000);
+  });
+
+  it("records a seek while paused", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "paused", startMs: 1_500 });
+    actor.send({ type: "seeked", currentTimeMs: 3_000 });
+    expect(actor.getSnapshot().context.currentTime).toBe(3_000);
+  });
+
+  it("records a seek while playing without leaving the playing state", () => {
+    const actor = newActor();
+    load(actor);
+    actor.send({ type: "play" });
+    actor.send({ type: "seeked", currentTimeMs: 4_000 });
+    expect(actor.getSnapshot().matches({ ready: "playing" })).toBe(true);
+    expect(actor.getSnapshot().context.currentTime).toBe(4_000);
+  });
+});

@@ -8,6 +8,12 @@ interface PlaybackContext {
   videoName: string | null;
   /** Real video length in integer ms once metadata has loaded; null until then. */
   videoDuration: number | null;
+  /**
+   * The last settled video position in integer ms. Updated by discrete events
+   * (pause, seek, range end, natural end, draft open); frozen while playing —
+   * live playback position stays in the DOM-driven rAF loops.
+   */
+  currentTime: number;
   /** The in-progress line captured at a pause point, before it is committed. */
   draft: Draft | null;
   /** Range currently being played (auto-paused at its end by the rAF watcher). */
@@ -37,6 +43,8 @@ type PlaybackEvent =
   | { type: "rangePlay"; startMs: number; endMs: number }
   | { type: "rangeEnd" }
   | { type: "ended" }
+  /** The video settled at `currentTimeMs` — sent on any seek, programmatic or native. */
+  | { type: "seeked"; currentTimeMs: number }
   | { type: "metadata"; durationMs: number }
   | { type: "commitDraft"; text: string }
   | { type: "cancelDraft" };
@@ -70,6 +78,7 @@ export const playbackMachine = setup({
       videoUrl: ({ event }) => ("videoUrl" in event ? event.videoUrl : null),
       videoName: ({ event }) => ("name" in event ? event.name : null),
       videoDuration: null,
+      currentTime: 0,
       draft: null,
       activeRange: null,
       videoReconnect: null,
@@ -99,12 +108,27 @@ export const playbackMachine = setup({
       videoDuration: ({ context, event }) =>
         "durationMs" in event ? event.durationMs : context.videoDuration,
     }),
+    /** Record the settled position carried by a position-bearing event. */
+    setCurrentTime: assign({
+      currentTime: ({ context, event }) => {
+        if ("currentTimeMs" in event) return event.currentTimeMs;
+        if ("startMs" in event) return event.startMs;
+        if (event.type === "rangeEnd") {
+          return context.activeRange?.endMs ?? context.currentTime;
+        }
+        if (event.type === "ended") {
+          return context.videoDuration ?? context.currentTime;
+        }
+        return context.currentTime;
+      },
+    }),
   },
 }).createMachine({
   context: (): PlaybackContext => ({
     videoUrl: null,
     videoName: null,
     videoDuration: null,
+    currentTime: 0,
     draft: null,
     activeRange: null,
     videoReconnect: null,
@@ -169,6 +193,7 @@ export const playbackMachine = setup({
       initial: "paused",
       on: {
         metadata: { actions: [{ type: "setDuration" }] },
+        seeked: { actions: [{ type: "setCurrentTime" }] },
       },
       states: {
         paused: {
@@ -179,7 +204,7 @@ export const playbackMachine = setup({
             },
             rangePlay: {
               target: "playing",
-              actions: [{ type: "setActiveRange" }],
+              actions: [{ type: "setActiveRange" }, { type: "setCurrentTime" }],
             },
             commitDraft: {
               guard: ({ context, event }) =>
@@ -187,7 +212,9 @@ export const playbackMachine = setup({
               actions: [{ type: "commitDraft" }, assign({ draft: null })],
             },
             cancelDraft: { actions: [{ type: "clearDraft" }] },
-            openDraft: { actions: [{ type: "openDraft" }] },
+            openDraft: {
+              actions: [{ type: "openDraft" }, { type: "setCurrentTime" }],
+            },
             fileLoaded: { target: "paused", actions: [{ type: "loadVideo" }] },
             handleLoaded: {
               target: "paused",
@@ -199,18 +226,32 @@ export const playbackMachine = setup({
           on: {
             paused: {
               target: "paused",
-              actions: [{ type: "openDraft" }],
+              actions: [{ type: "openDraft" }, { type: "setCurrentTime" }],
             },
-            pausedNoDraft: { target: "paused" },
-            openDraft: { actions: [{ type: "openDraft" }] },
-            rangePlay: { actions: [{ type: "setActiveRange" }] },
+            pausedNoDraft: {
+              target: "paused",
+              actions: [{ type: "setCurrentTime" }],
+            },
+            openDraft: {
+              actions: [{ type: "openDraft" }, { type: "setCurrentTime" }],
+            },
+            rangePlay: {
+              actions: [{ type: "setActiveRange" }, { type: "setCurrentTime" }],
+            },
             rangeEnd: {
               target: "paused",
-              actions: [{ type: "clearActiveRange" }],
+              actions: [
+                { type: "setCurrentTime" },
+                { type: "clearActiveRange" },
+              ],
             },
             ended: {
               target: "paused",
-              actions: [{ type: "clearActiveRange" }, { type: "clearDraft" }],
+              actions: [
+                { type: "setCurrentTime" },
+                { type: "clearActiveRange" },
+                { type: "clearDraft" },
+              ],
             },
             fileLoaded: { target: "paused", actions: [{ type: "loadVideo" }] },
             handleLoaded: {
