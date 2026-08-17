@@ -96,6 +96,23 @@ export function SettingsPanel() {
         </label>
       </div>
 
+      {speech && (
+        <label className="mt-3 flex flex-col gap-1">
+          <span className="text-xs text-neutral-400">Speech speed</span>
+          <input
+            type="number"
+            min={0.5}
+            max={2}
+            step={0.1}
+            value={settings.speechSpeed}
+            onChange={(event) =>
+              update({ speechSpeed: Number(event.target.value) })
+            }
+            className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 outline-none focus:border-blue-500"
+          />
+        </label>
+      )}
+
       <p className="mt-2 text-xs text-neutral-500">
         {speech ? (
           <>

@@ -11,6 +11,7 @@ import {
 } from "#/lib/format";
 import { speakText } from "#/lib/speech";
 import type { SubtitleWithEnd } from "#/lib/types";
+import { settingsStore } from "#/store/settingsStore";
 import { speechMeasureStore } from "#/store/speechMeasureStore";
 
 interface SubtitleRowProps {
@@ -32,6 +33,10 @@ export function SubtitleRow({ line, active }: SubtitleRowProps) {
   const { updateText, setManualEnd, nudgeStart, remove } = useSubtitleActions();
   const measuring = useSelector(speechMeasureStore, (snapshot) =>
     snapshot.context.measuring.includes(line.id),
+  );
+  const speechSpeed = useSelector(
+    settingsStore,
+    (snapshot) => snapshot.context.settings.speechSpeed,
   );
   const videoLoaded = playback.videoUrl != null;
   const [editingText, setEditingText] = useState(false);
@@ -203,7 +208,7 @@ export function SubtitleRow({ line, active }: SubtitleRowProps) {
         )}
         <button
           type="button"
-          onClick={() => speakText(line.text)}
+          onClick={() => speakText(line.text, speechSpeed)}
           title="Read line aloud"
           aria-label="Read line aloud"
           className="rounded px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-800 hover:text-neutral-100"
