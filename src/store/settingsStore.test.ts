@@ -59,6 +59,7 @@ describe("settingsStore", () => {
       maxDurationSec: 8,
       endMode: "reading",
       openDraftOnPause: true,
+      speechSpeed: 1,
     });
   });
 

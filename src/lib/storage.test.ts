@@ -109,7 +109,15 @@ describe("parseSettings", () => {
       maxDurationSec: 8,
       endMode: "speech",
       openDraftOnPause: true,
+      speechSpeed: 1,
     });
+  });
+
+  it("keeps a positive speech speed and falls back to 1 otherwise", () => {
+    expect(parseSettings({ speechSpeed: 1.5 }).speechSpeed).toBe(1.5);
+    expect(parseSettings({ speechSpeed: 0 }).speechSpeed).toBe(1);
+    expect(parseSettings({ speechSpeed: Number.NaN }).speechSpeed).toBe(1);
+    expect(parseSettings({}).speechSpeed).toBe(1);
   });
 });
 
