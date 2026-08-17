@@ -96,6 +96,7 @@ export function SubtitleRow({ line, active }: SubtitleRowProps) {
 
   return (
     <li
+      id={`subtitle-row-${line.id}`}
       className={`group flex flex-col items-start gap-x-3 gap-y-2 rounded border px-3 py-2 transition-colors ${
         active
           ? "border-blue-500 bg-blue-500/10"

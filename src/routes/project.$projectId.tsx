@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSelector } from "@xstate/react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { ProjectHeader } from "#/components/ProjectHeader";
 import { ShiftTiming } from "#/components/ShiftTiming";
@@ -74,6 +74,22 @@ function ProjectEditor({ projectId }: ProjectEditorProps) {
 function EditorShell() {
   const playback = usePlayback();
   const lines = useLines();
+  // When a new line appears (draft committed, + Add line, `n`), scroll its
+  // row into view. Diffs against the previous id set so the initial mount
+  // never scrolls.
+  const previousIdsRef = useRef<string[] | null>(null);
+  useEffect(() => {
+    const ids = lines.map((line) => line.id);
+    const prev = previousIdsRef.current;
+    previousIdsRef.current = ids;
+    if (prev == null) return;
+    const added = ids.find((id) => !prev.includes(id));
+    if (added) {
+      document
+        .getElementById(`subtitle-row-${added}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [lines]);
   // The line containing the video's current time (highlighted in the list).
   const activeLine = useActiveLine(
     lines,
