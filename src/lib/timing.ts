@@ -84,12 +84,28 @@ export function sortedWithEnds(
  * The line whose `[startMs, endMs)` range strictly contains `tMs`. Returns
  * null in a gap, before the first line, past the last line, or for an empty
  * list. `lines` must be sorted and non-overlapping (as `sortedWithEnds`).
+ * Binary-searched: the only candidate is the last line starting at or before
+ * `tMs`, so the linear scan becomes O(log n) on the per-frame hot path.
  */
 export function lineContaining(
   lines: SubtitleWithEnd[],
   tMs: number,
 ): SubtitleWithEnd | null {
-  return lines.find((line) => line.startMs <= tMs && line.endMs > tMs) ?? null;
+  let lo = 0;
+  let hi = lines.length - 1;
+  let candidate = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (lines[mid].startMs <= tMs) {
+      candidate = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  if (candidate < 0) return null;
+  const line = lines[candidate];
+  return line.endMs > tMs ? line : null;
 }
 
 /**
