@@ -34,12 +34,20 @@ _Avoid_: end strategy, timing mode
 
 **Speech duration**:
 A line's measured speaking time — how long the browser TTS takes to say its
-text, measured silently (volume 0) when the line is added or edited and stored
-per line as `speechDurationMs`. In speech mode it replaces the reading estimate
-for that line's default end; unmeasured lines (and measurement failures) fall
-back to the reading estimate. Machine/voice-specific; re-edit a line to
-re-measure.
+text at the speech speed, measured silently (volume 0) when the line is added
+or edited and stored per line as `speechDurationMs`. In speech mode it replaces
+the reading estimate for that line's default end; unmeasured lines (and
+measurement failures) fall back to the reading estimate. Machine/voice-specific;
+re-edit a line to re-measure.
 _Avoid_: spoken duration, TTS estimate
+
+**Speech speed**:
+The speech-rate multiplier (1 = normal) used when measuring a line's speech
+duration and when reading a line aloud (🔊) — hearing a line matches the timing
+it produced. Faster → shorter spoken durations. Changing it re-measures
+new/edited lines only; existing stored measurements stay until a line is
+re-edited.
+_Avoid_: talking speed, TTS rate
 
 **Measuring**:
 A line whose speech duration is being measured — its row's end time shows a
