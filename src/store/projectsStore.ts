@@ -1,6 +1,7 @@
 import { createStore } from "@xstate/store";
 import {
   createJSONStorage,
+  flushStorage,
   persist,
   type StateStorage,
 } from "@xstate/store/persist";
@@ -101,6 +102,10 @@ export function createProjectsStore(storage?: StateStorage) {
     persist({
       name: STORAGE_KEYS.projects,
       storage: storage ?? createJSONStorage(() => localStorage),
+      // Debounce writes: bursts of line edits/nudges coalesce into a single
+      // localStorage write instead of serializing the whole project list on
+      // every mutation (the pagehide listener below flushes the trailing one).
+      throttle: 500,
       pick: (context) => ({ projects: context.projects }),
       // The old useLocalStorage wrote the bare Project[] array, not the
       // `{ context, version }` envelope persist expects — adapt on read so
@@ -122,3 +127,11 @@ export function createProjectsStore(storage?: StateStorage) {
 
 /** The app-wide singleton. */
 export const projectsStore = createProjectsStore();
+
+// The throttle above delays the trailing write; force it out before the tab
+// closes so the last edit is never lost. Guarded for SSR/test environments.
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", () => {
+    void flushStorage(projectsStore);
+  });
+}

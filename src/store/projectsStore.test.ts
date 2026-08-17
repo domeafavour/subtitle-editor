@@ -1,5 +1,6 @@
 import type { StateStorage } from "@xstate/store/persist";
-import { describe, expect, it } from "vitest";
+import { flushStorage } from "@xstate/store/persist";
+import { describe, expect, it, vi } from "vitest";
 
 import { createProjectRecord } from "#/lib/project";
 import { STORAGE_KEYS } from "#/lib/storage";
@@ -83,8 +84,34 @@ describe("projectsStore", () => {
     const p = project();
     first.trigger.createProject({ project: p });
 
+    // Writes are throttled — flush forces the pending snapshot out.
+    flushStorage(first);
+
     const second = createProjectsStore(storage);
     expect(second.getSnapshot().context.projects[0]?.id).toBe(p.id);
+  });
+
+  it("coalesces burst writes and flushes the latest on demand", () => {
+    vi.useFakeTimers();
+    try {
+      const storage = memoryStorage();
+      const store = createProjectsStore(storage);
+      const p = project();
+      store.trigger.createProject({ project: p });
+      // The write is deferred — and a second mutation within the window
+      // replaces the pending snapshot rather than writing twice.
+      expect(storage.getItem(STORAGE_KEYS.projects)).toBeNull();
+
+      store.trigger.setTimingOffset({ id: p.id, offsetMs: 1000 });
+      vi.advanceTimersByTime(600);
+
+      const second = createProjectsStore(storage);
+      expect(second.getSnapshot().context.projects[0]?.timingOffsetMs).toBe(
+        1000,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reads a legacy bare-array value (old useLocalStorage format)", () => {
