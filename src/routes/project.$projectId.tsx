@@ -8,7 +8,11 @@ import { SubtitleInput } from "#/components/SubtitleInput";
 import { SubtitleRow } from "#/components/SubtitleRow";
 import { Timeline } from "#/components/Timeline";
 import { VideoStage } from "#/components/VideoStage";
-import { EditorProvider, usePlayback } from "#/hooks/editorContext";
+import {
+  ActiveLineContext,
+  EditorProvider,
+  usePlayback,
+} from "#/hooks/editorContext";
 import { useActiveLine } from "#/hooks/useActiveLine";
 import { useGlobalShortcuts } from "#/hooks/useGlobalShortcuts";
 import { useLines, useProject } from "#/hooks/useProjectData";
@@ -130,75 +134,77 @@ function EditorShell() {
   const project = useProject();
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col">
-      {/* Sticky header: pinned on every screen size; the opaque background
+    <ActiveLineContext.Provider value={activeLine}>
+      <div className="mx-auto flex max-w-7xl flex-col">
+        {/* Sticky header: pinned on every screen size; the opaque background
           covers the list scrolling beneath it. */}
-      <div className="sticky top-0 z-30 bg-[#0a0a0a] px-6 py-3">
-        <ProjectHeader />
-      </div>
+        <div className="sticky top-0 z-30 bg-[#0a0a0a] px-6 py-3">
+          <ProjectHeader />
+        </div>
 
-      {/* minmax(0, 1fr) so the track can't grow from content — the timeline's
+        {/* minmax(0, 1fr) so the track can't grow from content — the timeline's
           scrollable content is far wider than the viewport for long videos. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px] px-6">
-        {/* Video + timeline stay pinned on wide screens while the list
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px] px-6">
+          {/* Video + timeline stay pinned on wide screens while the list
             scrolls; on narrow screens they scroll with the page. */}
-        <div className="lg:sticky lg:top-14 lg:self-start">
-          <div className="h-12 inline-flex items-center justify-between gap-3 w-full">
-            {project?.videoName && (
-              <span className="min-w-0 truncate text-base text-neutral-500">
-                {project.videoName}
-              </span>
-            )}
-            <ShiftTiming />
+          <div className="lg:sticky lg:top-14 lg:self-start">
+            <div className="h-12 inline-flex items-center justify-between gap-3 w-full">
+              {project?.videoName && (
+                <span className="min-w-0 truncate text-base text-neutral-500">
+                  {project.videoName}
+                </span>
+              )}
+              <ShiftTiming />
+            </div>
+            <div className="flex flex-col gap-2">
+              <VideoStage />
+              <Timeline />
+            </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <VideoStage />
-            <Timeline />
-          </div>
-        </div>
 
-        <div className="flex flex-col max-lg:gap-3">
-          {/* Pinned alongside the sticky video column on wide screens; the
+          <div className="flex flex-col max-lg:gap-3">
+            {/* Pinned alongside the sticky video column on wide screens; the
               opaque background covers the list scrolling beneath it. */}
-          <div className="flex items-center justify-between lg:sticky lg:top-14 lg:z-10 lg:bg-[#0a0a0a] lg:py-2">
-            <h2 className="text-sm font-semibold text-neutral-300">
-              Subtitles
-            </h2>
-            <button
-              type="button"
-              onClick={() => playback.openDraftAtCurrentTime()}
-              disabled={playback.videoUrl == null}
-              title={
-                playback.videoUrl == null
-                  ? "Load the video first"
-                  : "New line at the current playhead"
-              }
-              className="rounded bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              + Add line
-            </button>
+            <div className="flex items-center justify-between lg:sticky lg:top-14 lg:z-10 lg:bg-[#0a0a0a] lg:py-2">
+              <h2 className="text-sm font-semibold text-neutral-300">
+                Subtitles
+              </h2>
+              <button
+                type="button"
+                onClick={() => playback.openDraftAtCurrentTime()}
+                disabled={playback.videoUrl == null}
+                title={
+                  playback.videoUrl == null
+                    ? "Load the video first"
+                    : "New line at the current playhead"
+                }
+                className="rounded bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-200 transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                + Add line
+              </button>
+            </div>
+            {lines.length === 0 ? (
+              <p className="py-6 text-center text-sm text-neutral-500">
+                No subtitles yet — pause the video and type the first line, or
+                use “+ Add line”.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {lines.map((line) => (
+                  <SubtitleRow
+                    key={line.id}
+                    line={line}
+                    active={line.id === (activeLine?.id ?? null)}
+                  />
+                ))}
+              </ul>
+            )}
           </div>
-          {lines.length === 0 ? (
-            <p className="py-6 text-center text-sm text-neutral-500">
-              No subtitles yet — pause the video and type the first line, or use
-              “+ Add line”.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {lines.map((line) => (
-                <SubtitleRow
-                  key={line.id}
-                  line={line}
-                  active={line.id === (activeLine?.id ?? null)}
-                />
-              ))}
-            </ul>
-          )}
         </div>
-      </div>
 
-      {/* Floating draft composer — fixed to the viewport, never in flow. */}
-      <SubtitleInput />
-    </div>
+        {/* Floating draft composer — fixed to the viewport, never in flow. */}
+        <SubtitleInput />
+      </div>
+    </ActiveLineContext.Provider>
   );
 }
