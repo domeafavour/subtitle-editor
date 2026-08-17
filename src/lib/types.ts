@@ -62,6 +62,11 @@ export interface Settings {
    * pauses; lines are added manually (+ Add line / `n`).
    */
   openDraftOnPause: boolean;
+  /**
+   * Speech rate multiplier (1 = normal). Drives the speech-duration
+   * measurement and the read-aloud: faster → shorter spoken durations.
+   */
+  speechSpeed: number;
 }
 
 /** An in-progress line captured at a pause point, not yet committed. */

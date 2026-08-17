@@ -18,6 +18,8 @@ export function defaultSettings(): Settings {
     endMode: "reading",
     // Pausing opens the draft by default; off means manual adds only.
     openDraftOnPause: true,
+    // Natural speech rate; faster = shorter measured durations.
+    speechSpeed: 1,
   };
 }
 
@@ -112,6 +114,7 @@ export function parseSettings(raw: unknown): Settings {
     maxDurationSec,
     endMode,
     openDraftOnPause,
+    speechSpeed,
   } = raw as Record<string, unknown>;
   return {
     charsPerSec: finiteNumber(charsPerSec) ?? fallback.charsPerSec,
@@ -121,11 +124,18 @@ export function parseSettings(raw: unknown): Settings {
     endMode: endMode === "speech" ? "speech" : "reading",
     // Only a literal `false` disables the pause draft; anything else is on.
     openDraftOnPause: openDraftOnPause !== false,
+    speechSpeed: positiveNumber(speechSpeed) ?? fallback.speechSpeed,
   };
 }
 
 function finiteNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+function positiveNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
     : undefined;
 }
