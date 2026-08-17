@@ -12,6 +12,7 @@ import { EditorProvider, usePlayback } from "#/hooks/editorContext";
 import { useActiveLine } from "#/hooks/useActiveLine";
 import { useGlobalShortcuts } from "#/hooks/useGlobalShortcuts";
 import { useLines, useProject } from "#/hooks/useProjectData";
+import { subtitleRowId } from "#/lib/domIds";
 import { projectsStore } from "#/store/projectsStore";
 
 /** One 30 fps video frame (1000 / 30) — the ← / → step size. */
@@ -86,7 +87,7 @@ function EditorShell() {
     const added = ids.find((id) => !prev.includes(id));
     if (added) {
       document
-        .getElementById(`subtitle-row-${added}`)
+        .getElementById(subtitleRowId(added))
         ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [lines]);
