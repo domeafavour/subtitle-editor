@@ -1,6 +1,6 @@
 import { useSelector } from "@xstate/react";
 import type { KeyboardEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 
 import { usePlayback } from "#/hooks/editorContext";
 import { useSubtitleActions } from "#/hooks/useProjectData";
@@ -27,9 +27,15 @@ interface SubtitleRowProps {
  * line's range; the end time is a separate click-to-edit (seconds) with a
  * reset-to-automatic control when overridden. Nudge/delete stay as controls.
  * Playback and store mutations come from context — only `line`/`active` are
- * props.
+ * props. Memoized: `useLines` keeps unchanged lines referentially stable, so
+ * editing one line re-renders only the rows whose `line`/`active` actually
+ * changed (store-driven updates like the measuring spinner still land via the
+ * `useSelector` subscriptions).
  */
-export function SubtitleRow({ line, active }: SubtitleRowProps) {
+export const SubtitleRow = memo(function SubtitleRow({
+  line,
+  active,
+}: SubtitleRowProps) {
   const playback = usePlayback();
   const { updateText, setManualEnd, nudgeStart, remove } = useSubtitleActions();
   const measuring = useSelector(speechMeasureStore, (snapshot) =>
@@ -267,4 +273,4 @@ export function SubtitleRow({ line, active }: SubtitleRowProps) {
       </div>
     </li>
   );
-}
+});

@@ -43,7 +43,6 @@ export function Timeline() {
   // Scale: the real video duration when loaded, else the last line's end.
   const durationMs =
     playback.videoDuration ?? lines[lines.length - 1]?.endMs ?? 0;
-  const [playheadMs, setPlayheadMs] = useState(0);
 
   // The scroll container's width, kept current so short videos keep fitting
   // the track while long videos fall back to the minimum scale.
@@ -91,33 +90,6 @@ export function Timeline() {
     [pxPerMs],
   );
 
-  // Reflect the settled position — pauses, keyboard/row seeks, native
-  // progress-bar drags (all reach the machine's `currentTime`) — and
-  // re-snap/scroll on scale changes (`scrollPlayheadIntoView` depends on
-  // `pxPerMs`, and a fresh video resets `currentTime` to 0).
-  useEffect(() => {
-    setPlayheadMs(playback.currentTime);
-    scrollPlayheadIntoView(playback.currentTime);
-  }, [playback.currentTime, scrollPlayheadIntoView]);
-
-  // Move the playhead while playing (60 Hz, re-renders only this small track;
-  // `currentTime` is frozen while playing, so this is the live source).
-  useEffect(() => {
-    if (!playback.isPlaying) return;
-    let frame = 0;
-    const tick = () => {
-      const video = playback.videoRef.current;
-      if (video) {
-        const ms = video.currentTime * 1000;
-        setPlayheadMs(ms);
-        scrollPlayheadIntoView(ms);
-      }
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [playback.isPlaying, playback.videoRef, scrollPlayheadIntoView]);
-
   return (
     <div
       ref={trackRef}
@@ -158,15 +130,66 @@ export function Timeline() {
               />
             );
           })}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute top-0 bottom-0 w-px bg-red-500"
-            style={{
-              left: `${playheadPx(playheadMs, durationMs, pxPerMs)}px`,
-            }}
+          <Playhead
+            durationMs={durationMs}
+            pxPerMs={pxPerMs}
+            scrollIntoView={scrollPlayheadIntoView}
           />
         </div>
       )}
     </div>
+  );
+}
+
+interface PlayheadProps {
+  durationMs: number;
+  pxPerMs: number;
+  scrollIntoView: (ms: number) => void;
+}
+
+/**
+ * The red playhead. Owns its position and the live-tracking loop so the 60 Hz
+ * `setState` re-renders only this one `<div>` — the block list above stays out
+ * of the per-frame render path. Reflects settled positions (pauses, seeks)
+ * and re-snaps/scrolls on scale changes from the parent.
+ */
+function Playhead({ durationMs, pxPerMs, scrollIntoView }: PlayheadProps) {
+  const playback = usePlayback();
+  const [ms, setMs] = useState(playback.currentTime);
+
+  // Reflect the settled position — pauses, keyboard/row seeks, native
+  // progress-bar drags (all reach the machine's `currentTime`) — and
+  // re-snap/scroll on scale changes (`scrollIntoView` depends on `pxPerMs`,
+  // and a fresh video resets `currentTime` to 0).
+  useEffect(() => {
+    setMs(playback.currentTime);
+    scrollIntoView(playback.currentTime);
+  }, [playback.currentTime, scrollIntoView]);
+
+  // Move the playhead while playing (60 Hz, re-renders only this playhead;
+  // the machine's `currentTime` is frozen while playing, so this is the live
+  // source).
+  useEffect(() => {
+    if (!playback.isPlaying) return;
+    let frame = 0;
+    const tick = () => {
+      const video = playback.videoRef.current;
+      if (video) {
+        const current = video.currentTime * 1000;
+        setMs(current);
+        scrollIntoView(current);
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [playback.isPlaying, playback.videoRef, scrollIntoView]);
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 bottom-0 w-px bg-red-500"
+      style={{ left: `${playheadPx(ms, durationMs, pxPerMs)}px` }}
+    />
   );
 }
