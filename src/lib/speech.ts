@@ -6,14 +6,16 @@
  * unavailable (SSR, unsupported browsers).
  */
 
-/** Read `text` aloud. Cancels any ongoing utterance so rapid clicks don't queue. */
-export function speakText(text: string): void {
+/** Read `text` aloud at `rate` (speechSpeed multiplier, 1 = normal). Cancels
+ * any ongoing utterance so rapid clicks don't queue. */
+export function speakText(text: string, rate = 1): void {
   const trimmed = text.trim();
   if (trimmed.length === 0) return;
   const synth = getSpeechSynthesis();
   if (!synth) return;
   synth.cancel();
   const utterance = new SpeechSynthesisUtterance(trimmed);
+  if (Number.isFinite(rate) && rate > 0) utterance.rate = rate;
   synth.speak(utterance);
 }
 

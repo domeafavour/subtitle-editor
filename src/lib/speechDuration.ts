@@ -4,7 +4,7 @@
  * The default end of a line can be derived from how long its text takes to
  * speak: we speak it at volume 0 and time the utterance, so the user never
  * hears it. Measurements are serialized (the synth is single-channel) and
- * cached per normalized text for the session. Degrades silently to `null`
+ * cached per (rate, text) for the session. Degrades silently to `null`
  * when the API is unavailable, an utterance errors, or a timeout hits.
  */
 
@@ -15,15 +15,21 @@ const cache = new Map<string, number>();
 let queue: Promise<unknown> = Promise.resolve();
 
 /**
- * Measure how long `text` takes to speak, in integer milliseconds. Resolves
- * `null` on any failure (no API, utterance error, timeout, empty text) so
- * callers fall back to the reading estimate. Serialized: measurements never
- * overlap the single speech channel.
+ * Measure how long `text` takes to speak at `rate` (speechSpeed multiplier,
+ * 1 = normal), in integer milliseconds. Resolves `null` on any failure (no
+ * API, utterance error, timeout, empty text) so callers fall back to the
+ * reading estimate. Serialized: measurements never overlap the single speech
+ * channel.
  */
-export function measureSpeechDuration(text: string): Promise<number | null> {
+export function measureSpeechDuration(
+  text: string,
+  rate = 1,
+): Promise<number | null> {
   const trimmed = text.trim();
   if (trimmed.length === 0) return Promise.resolve(null);
-  const cached = cache.get(trimmed);
+  const safeRate = Number.isFinite(rate) && rate > 0 ? rate : 1;
+  const key = `${safeRate}|${trimmed}`;
+  const cached = cache.get(key);
   if (cached != null) return Promise.resolve(cached);
 
   const run = (): Promise<number | null> =>
@@ -35,6 +41,7 @@ export function measureSpeechDuration(text: string): Promise<number | null> {
       }
       const utterance = new SpeechSynthesisUtterance(trimmed);
       utterance.volume = 0;
+      utterance.rate = safeRate;
       const start = performance.now();
       let settled = false;
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -43,7 +50,7 @@ export function measureSpeechDuration(text: string): Promise<number | null> {
         settled = true;
         if (timer) clearTimeout(timer);
         if (value != null) {
-          cache.set(trimmed, value);
+          cache.set(key, value);
           if (cache.size > CACHE_LIMIT) {
             cache.delete(cache.keys().next().value as string);
           }
