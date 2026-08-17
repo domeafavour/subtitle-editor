@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
 
+import type { SubtitleWithEnd } from "#/lib/types";
+
 import { type PlaybackApi, usePlaybackMachine } from "./usePlaybackMachine";
 
 interface EditorContextValue {
@@ -9,6 +11,19 @@ interface EditorContextValue {
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
+
+/**
+ * The editor's single active line — the one containing the video's current
+ * time. Computed by one `useActiveLine` rAF loop (in `EditorShell`) and shared
+ * with the video overlay via this context, so playback never runs duplicate
+ * per-frame scans.
+ */
+export const ActiveLineContext = createContext<SubtitleWithEnd | null>(null);
+
+/** The current active line, computed once by the editor shell. */
+export function useActiveLineValue(): SubtitleWithEnd | null {
+  return useContext(ActiveLineContext);
+}
 
 /**
  * Scopes one project editor: the route's per-project playback machine and the

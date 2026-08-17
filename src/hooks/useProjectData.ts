@@ -1,5 +1,5 @@
 import { useSelector } from "@xstate/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { measureSpeechDuration } from "#/lib/speechDuration";
 import {
   nudgeSubtitleStart,
@@ -9,7 +9,7 @@ import {
   updateSubtitleText,
 } from "#/lib/subtitles";
 import { sortedWithEnds } from "#/lib/timing";
-import type { Project, SubtitleWithEnd } from "#/lib/types";
+import type { Project, Subtitle, SubtitleWithEnd } from "#/lib/types";
 import { projectsStore } from "#/store/projectsStore";
 import { settingsStore } from "#/store/settingsStore";
 import { speechMeasureStore } from "#/store/speechMeasureStore";
@@ -34,10 +34,11 @@ export function useProject(): Project | null {
 
 /**
  * The current project's subtitles, chronologically sorted with derived end
- * times attached and the project's timing offset applied. Memoized on the
- * project and reading-speed settings so the array (and the line objects
- * inside) stay referentially stable across renders — required by
- * `useActiveLine` and the Timeline/Overlay rAF loops.
+ * times attached and the project's timing offset applied. Line objects are
+ * cached by id and reused across recomputes: only the edited line (and any
+ * whose derived end shifted) get fresh identities per mutation, so unchanged
+ * rows keep their `line` prop reference — required by `useActiveLine`, the
+ * Timeline/Overlay rAF loops, and `SubtitleRow`'s memo.
  */
 export function useLines(): SubtitleWithEnd[] {
   const project = useProject();
@@ -45,24 +46,62 @@ export function useLines(): SubtitleWithEnd[] {
     settingsStore,
     (snapshot) => snapshot.context.settings,
   );
-  return useMemo(
-    () =>
-      sortedWithEnds(
-        project?.subtitles ?? [],
-        settings,
-        project?.timingOffsetMs ?? 0,
-      ),
-    [project, settings],
+  const cacheRef = useRef(
+    new Map<string, { line: SubtitleWithEnd; raw: Subtitle }>(),
+  );
+
+  return useMemo(() => {
+    const raw = project?.subtitles ?? [];
+    const offset = project?.timingOffsetMs ?? 0;
+    const computed = sortedWithEnds(raw, settings, offset);
+    const rawById = new Map(raw.map((sub) => [sub.id, sub]));
+    const cache = cacheRef.current;
+    // Drop cache entries for lines that no longer exist.
+    for (const id of cache.keys()) {
+      if (!rawById.has(id)) cache.delete(id);
+    }
+    return computed.map((line) => {
+      const entry = cache.get(line.id);
+      const rawSub = rawById.get(line.id);
+      // Mutators only replace the subtitle they touch, so unchanged lines keep
+      // their stored reference — reuse the cached object when the raw subtitle
+      // and the derived end are both unchanged (a neighbor's clamp, settings,
+      // or offset change always shows up in `endMs`).
+      if (
+        entry != null &&
+        rawSub != null &&
+        entry.raw === rawSub &&
+        entry.line.endMs === line.endMs
+      ) {
+        return entry.line;
+      }
+      cache.set(line.id, { line, raw: rawSub ?? line });
+      return line;
+    });
+  }, [project, settings]);
+}
+
+/**
+ * The current project's timing offset, subscribed granularly (a number, not
+ * the whole projects array) so rows don't re-render on every project mutation.
+ */
+export function useTimingOffset(): number {
+  const projectId = useProjectId();
+  return useSelector(
+    projectsStore,
+    (snapshot) =>
+      snapshot.context.projects.find((item) => item.id === projectId)
+        ?.timingOffsetMs ?? 0,
   );
 }
 
 /**
  * Stable per-line mutation callbacks, wired straight into `projectsStore`.
- * Recreated only when the project id changes.
+ * Recreated only when the project id, timing offset, or speech settings change.
  */
 export function useSubtitleActions() {
   const projectId = useProjectId();
-  const project = useProject();
+  const timingOffsetMs = useTimingOffset();
   const speechSettings = useSelector(settingsStore, (snapshot) => ({
     endMode: snapshot.context.settings.endMode,
     speechSpeed: snapshot.context.settings.speechSpeed,
@@ -94,18 +133,17 @@ export function useSubtitleActions() {
     (id: string, endMs: number | null) => {
       // The editor shows shifted times; store the raw value by unshifting so
       // validation and later rendering stay consistent with the capture time.
-      const offsetMs = project?.timingOffsetMs ?? 0;
       projectsStore.trigger.updateSubtitles({
         id: projectId,
         updater: (prev) =>
           setSubtitleManualEnd(
             prev,
             id,
-            endMs == null ? null : endMs - offsetMs,
+            endMs == null ? null : endMs - timingOffsetMs,
           ),
       });
     },
-    [project?.timingOffsetMs, projectId],
+    [projectId, timingOffsetMs],
   );
   const nudgeStart = useCallback(
     (id: string, deltaMs: number) => {
