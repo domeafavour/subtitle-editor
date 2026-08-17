@@ -63,10 +63,10 @@ export function useLines(): SubtitleWithEnd[] {
 export function useSubtitleActions() {
   const projectId = useProjectId();
   const project = useProject();
-  const endMode = useSelector(
-    settingsStore,
-    (snapshot) => snapshot.context.settings.endMode,
-  );
+  const speechSettings = useSelector(settingsStore, (snapshot) => ({
+    endMode: snapshot.context.settings.endMode,
+    speechSpeed: snapshot.context.settings.speechSpeed,
+  }));
   const updateText = useCallback(
     (id: string, text: string) => {
       projectsStore.trigger.updateSubtitles({
@@ -75,9 +75,9 @@ export function useSubtitleActions() {
       });
       // Speech mode: re-measure the edited text's spoken duration. The line
       // shows a measuring spinner until the promise settles.
-      if (endMode === "speech") {
+      if (speechSettings.endMode === "speech") {
         speechMeasureStore.trigger.start({ id });
-        void measureSpeechDuration(text)
+        void measureSpeechDuration(text, speechSettings.speechSpeed)
           .finally(() => speechMeasureStore.trigger.end({ id }))
           .then((ms) => {
             if (ms == null) return;
@@ -88,7 +88,7 @@ export function useSubtitleActions() {
           });
       }
     },
-    [endMode, projectId],
+    [projectId, speechSettings],
   );
   const setManualEnd = useCallback(
     (id: string, endMs: number | null) => {

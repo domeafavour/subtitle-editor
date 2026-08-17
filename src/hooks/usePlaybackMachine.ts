@@ -98,8 +98,10 @@ export function usePlaybackMachine(projectId: string): PlaybackApi {
             if (
               settingsStore.getSnapshot().context.settings.endMode === "speech"
             ) {
+              const speechSpeed =
+                settingsStore.getSnapshot().context.settings.speechSpeed;
               speechMeasureStore.trigger.start({ id });
-              void measureSpeechDuration(event.text)
+              void measureSpeechDuration(event.text, speechSpeed)
                 .finally(() => speechMeasureStore.trigger.end({ id }))
                 .then((ms) => {
                   if (ms == null) return;
