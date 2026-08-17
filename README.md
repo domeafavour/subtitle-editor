@@ -35,7 +35,8 @@ file handles).
   reading-speed estimate (chars/sec, clamped between min/max seconds) and the
   line's **measured speech duration** (the browser TTS speaks it silently at
   volume 0 when the line is added or edited; rows and the timeline show a
-  measuring indicator until it lands). A manual end override always wins.
+  measuring indicator until it lands; the speech speed is adjustable). A manual
+  end override always wins.
 - **Export** — the header's **Export** menu downloads `.srt` or `.vtt` with
   the effective end times baked in.
 - **Keyboard shortcuts** — `Space` play/pause, `[` / `]` jump to the previous
