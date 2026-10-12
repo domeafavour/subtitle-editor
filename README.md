@@ -85,6 +85,11 @@ src/
   migration (run from the root route) wraps the legacy pre-project subtitle
   data into a project.
 
+## Support
+
+If this project or the standalone **调时台** timing toolkit (`dist-tool/调时台.html`)
+saved you some time, consider [buying me a coffee on 爱发电](https://afdian.com/a/tiaoshitai) ☕
+
 ## Stack
 
 - React 19 + TypeScript
